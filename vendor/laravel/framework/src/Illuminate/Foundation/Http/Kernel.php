@@ -70,7 +70,9 @@ class Kernel implements KernelContract
      *
      * @deprecated
      */
-    protected $routeMiddleware = [];
+    protected $routeMiddleware = [
+        'verified.otp' => \App\Http\Middleware\OtpVerified::class,
+    ];
 
     /**
      * The application's middleware aliases.

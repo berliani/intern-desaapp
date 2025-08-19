@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Middleware\RoleMiddleware;
 use Livewire\Volt\Volt;
+
 // Livewire Components
 use App\Livewire\Warga\Dashboard;
 use App\Livewire\Warga\Pengaduan;
@@ -13,6 +14,10 @@ use App\Livewire\Warga\Profile;
 use App\Livewire\Warga\VerifikasiData;
 use App\Livewire\Warga\PengajuanBansos;
 use App\Livewire\Warga\BansosDetail;
+
+use App\Livewire\Pages\Auth\RegisterDesa;
+// use App\Livewire\Pages\Auth\PreRegister;
+// use App\Livewire\Pages\Auth\VerifyOtp;
 
 // Export Controllers
 use App\Http\Controllers\LayananExportController;
@@ -28,6 +33,7 @@ use App\Http\Controllers\BansosExportController;
 
 // Front Controllers
 use App\Http\Controllers\FrontController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -58,6 +64,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     })->name('dashboard');
     Volt::route('desa/dashboard', 'desa.dashboard')->name('admin.dashboard');
 });
+
+/*
+|--------------------------------------------------------------------------
+| Register-Desa Routes
+|--------------------------------------------------------------------------
+*/
+Route::get('/register-desa', RegisterDesa::class)->name('register-desa');
+// Route::get('/register-email', PreRegister::class)->name('pre-register');
+// Route::get('/verify-otp', VerifyOtp::class)->name('verify-otp');
+// Route::post('/verify-otp', [VerifyOtp::class, 'verify'])->name('verify-otp.post');
 
 /*
 |--------------------------------------------------------------------------

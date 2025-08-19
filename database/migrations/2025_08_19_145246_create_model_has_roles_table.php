@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('model_has_roles', function (Blueprint $table) {
+            $table->integer('role_id');
+            $table->string('model_type');
+            $table->integer('model_id');
+            $table->integer('company_id')->nullable()->index('model_has_roles_company_id_foreign');
+
+            $table->index(['model_id', 'model_type']);
+            $table->primary(['role_id', 'model_id', 'model_type']);
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('model_has_roles');
+    }
+};
