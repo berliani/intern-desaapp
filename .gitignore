@@ -1,1 +1,33 @@
 .env
+
+# Abaikan folder dependensi PHP yang diinstall oleh Composer
+# Folder ini bisa dibuat ulang kapan saja dengan 'composer install'
+# dan merupakan penyebab utama konflik Anda.
+/vendor/
+
+# Abaikan file lock dari Composer.
+# Mengabaikan file ini dapat mencegah konflik jika anggota tim
+# memiliki versi dependensi yang sedikit berbeda.
+/composer.lock
+
+# Abaikan folder dependensi JavaScript yang diinstall oleh NPM
+/node_modules/
+
+# Abaikan file environment yang berisi kredensial dan kunci rahasia
+# SANGAT PENTING: File ini tidak boleh bocor ke publik!
+.env
+
+# File log Laravel
+/storage/logs/*.log
+*.log
+
+# File cache yang dibuat oleh Laravel
+/bootstrap/cache/
+
+# File yang dihasilkan oleh proses build Vite atau Laravel Mix
+/public/build/
+/public/hot/
+
+# File spesifik sistem operasi (macOS, Windows)
+.DS_Store
+Thumbs.db
