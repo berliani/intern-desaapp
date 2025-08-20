@@ -1,87 +1,6 @@
-<?php
-
-use App\Models\User;
-use App\Models\Company;
-use App\Models\ProfilDesa;
-use Illuminate\Auth\Events\Registered;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
-use Livewire\Attributes\Layout;
-use Livewire\Volt\Component;
-use Illuminate\Support\Str;
-
-new #[Layout('layouts.guest')] class extends Component
-{
-    // Properti untuk data desa
-    public string $nama_desa = '';
-    public string $subdomain = '';
-
-    // Properti untuk data admin desa
-    public string $admin_name = '';
-    public string $admin_email = '';
-    public string $admin_password = '';
-    public string $admin_password_confirmation = '';
-
-    /**
-     * Secara otomatis membuat slug untuk subdomain saat nama desa diketik.
-     */
-    public function updatedNamaDesa($value)
-    {
-        $this->subdomain = Str::slug($value);
-    }
-
-    /**
-     * Menangani permintaan pendaftaran desa baru.
-     */
-    public function registerDesa(): void
-    {
-        // Validasi input form
-        $validated = $this->validate([
-            'nama_desa' => ['required', 'string', 'max:100', 'unique:'.Company::class.',name'],
-            'subdomain' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:'.Company::class.',subdomain'],
-            'admin_name' => ['required', 'string', 'max:255'],
-            'admin_email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class.',email'],
-            'admin_password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
-        ]);
-
-
-        DB::transaction(function () use ($validated) {
-            // 1. Buat entri baru di tabel 'companies'
-            $company = Company::create([
-                'name' => $validated['nama_desa'],
-                'subdomain' => $validated['subdomain'],
-            ]);
-
-            // 2. Buat user admin untuk desa tersebut
-            $adminUser = User::create([
-                'name' => $validated['admin_name'],
-                'email' => $validated['admin_email'],
-                'password' => Hash::make($validated['admin_password']),
-                'company_id' => $company->id, // Tautkan user dengan company
-            ]);
-
-
-            // 3. Berikan role 'admin' kepada user baru
-            $adminUser->assignRole('admin');
-
-            // 4. Login user admin yang baru dibuat
-            Auth::login($adminUser);
-
-            // 5. Kirim event bahwa user telah terdaftar
-            event(new Registered($adminUser));
-        });
-
-        // 6. Redirect ke dashboard admin desa untuk melengkapi profil
-        $this->redirect('/desa/dashboard', navigate: true);
-    }
-}; ?>
-
-<div>
-    <!-- Header Modern -->
+<div x-data="{ verificationMethod: @entangle('verificationMethod') }" @subdomain-filled.window="$nextTick(() => $refs.identifier.focus())">
     <div class="mb-6">
-         <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent">
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent">
             Daftarkan Desa Anda
         </h2>
         <p class="text-gray-600 mt-2">
@@ -89,76 +8,171 @@ new #[Layout('layouts.guest')] class extends Component
         </p>
     </div>
 
-    <form wire:submit="registerDesa" class="space-y-4">
+    {{-- Notifikasi --}}
+    @if (session('status'))
+        <div class="mb-4 p-4 text-sm text-green-800 rounded-lg bg-green-50" role="alert">
+            {{ session('status') }}
+        </div>
+    @endif
+    @if (session('error'))
+        <div class="mb-4 p-4 text-sm text-red-800 rounded-lg bg-red-50" role="alert">
+            {{ session('error') }}
+        </div>
+    @endif
+
+    <form wire:submit="register" class="space-y-4">
         @csrf
 
-        {{-- Bagian Informasi Desa --}}
-        <div class="p-4 border rounded-lg bg-gray-50">
-            <h3 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Informasi Desa</h3>
-            <!-- Nama Desa -->
+        {{-- Bagian 1: Informasi Desa & Admin --}}
+        <fieldset class="p-4 border rounded-lg bg-gray-50 space-y-4" @if($otpVerified) disabled @endif>
+            <legend class="text-lg font-semibold text-gray-800 px-2">1. Informasi Desa</legend>
+
             <div>
                 <x-input-label for="nama_desa" value="Nama Desa" />
-                <x-text-input wire:model.live="nama_desa" id="nama_desa" class="block mt-1 w-full" type="text" name="nama_desa" required autofocus placeholder="Contoh: Desa Makmur Jaya" />
+                <x-text-input wire:model.live="nama_desa" id="nama_desa" class="block mt-1 w-full" type="text" required autofocus />
                 <x-input-error :messages="$errors->get('nama_desa')" class="mt-2" />
             </div>
 
-            <!-- Subdomain -->
-            <div class="mt-4">
+            <div>
                 <x-input-label for="subdomain" value="Alamat Website (Subdomain)" />
-                <div class="flex items-center">
-                    <x-text-input wire:model="subdomain" id="subdomain" class="block w-full rounded-r-none" type="text" name="subdomain" required placeholder="contoh: makmur-jaya" />
-                    <span class="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-l-0 border-gray-300 rounded-r-md h-11">
-                        .desa.local
-                    </span>
+                 <div class="flex items-center">
+                    <x-text-input wire:model="subdomain" id="subdomain" class="block w-full rounded-r-none" type="text" required />
+                    <span class="inline-flex items-center px-3 text-sm text-gray-900 bg-gray-200 border border-l-0 border-gray-300 rounded-r-md h-11">.desa.local</span>
                 </div>
-                 <x-input-error :messages="$errors->get('subdomain')" class="mt-2" />
-                 <p class="text-xs text-gray-500 mt-1">Hanya boleh berisi huruf, angka, dan tanda hubung (-).</p>
+                <x-input-error :messages="$errors->get('subdomain')" class="mt-2" />
             </div>
+        </fieldset>
+
+        {{-- Bagian 2: Verifikasi Akun --}}
+        <div class="p-4 border rounded-lg bg-gray-50 mt-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">2. Verifikasi Akun</h3>
+
+            @if(!$otpVerified)
+                <div>
+                    <x-input-label value="Pilih Metode Verifikasi" />
+                    <div class="flex items-center gap-6 mt-2">
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" wire:model.live="verificationMethod" value="email" name="verification_method" class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300">
+                            <span class="text-gray-700">Email</span>
+                        </label>
+                        <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" wire:model.live="verificationMethod" value="whatsapp" name="verification_method" class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300">
+                            <span class="text-gray-700">WhatsApp</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <div x-show="verificationMethod === 'email'">
+                        <x-input-label for="admin_email" value="Alamat Email" />
+                        <x-text-input x-ref="identifier" wire:model="admin_email" id="admin_email" class="block mt-1 w-full" type="email" />
+                        <x-input-error :messages="$errors->get('admin_email')" class="mt-2" />
+                    </div>
+                    <div x-show="verificationMethod === 'whatsapp'">
+                        <x-input-label for="telepon" value="Nomor WhatsApp" />
+                        <x-text-input x-ref="identifier" wire:model="telepon" id="telepon" class="block mt-1 w-full" type="text" placeholder="Contoh: 081234567890" />
+                        <x-input-error :messages="$errors->get('telepon')" class="mt-2" />
+                    </div>
+                </div>
+
+              <label for="captcha" class="block text-sm font-medium text-gray-700">Verifikasi Captcha</label>
+                <div class="flex items-center space-x-4 mt-1">
+                    {{-- Captcha yang sudah di-styling --}}
+                    <div class="flex items-center justify-around w-48 h-16 px-2 bg-gray-200 border rounded-md overflow-hidden" style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d4d8\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+                        @foreach (str_split($generatedCaptcha) as $char)
+                            @php
+                                $hue = rand(0, 360);
+                                $saturation = rand(70, 95);
+                                $lightness = rand(25, 45);
+                                $color = "hsl({$hue}, {$saturation}%, {$lightness}%)";
+                                $rotation = rand(-25, 25);
+                                $font_size = rand(22, 32);
+                                $top_offset = rand(-5, 5);
+                                $font_weight = rand(400, 800);
+                            @endphp
+                            <span class="select-none" style="transform: rotate({{ $rotation }}deg); font-size: {{ $font_size }}px; font-weight: {{ $font_weight }}; position: relative; top: {{ $top_offset }}px; color: {{ $color }}; font-family: 'Courier New', Courier, monospace;">
+                                {{ $char }}
+                            </span>
+                        @endforeach
+                    </div>
+                    <button type="button" wire:click="generateCaptcha" title="Refresh Captcha" class="p-2 text-gray-600 bg-white border rounded-md hover:bg-gray-50">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.181-3.183m-4.991-2.695v-2.257a2.25 2.25 0 00-2.25-2.25H10.5a2.25 2.25 0 00-2.25 2.25v2.257m1.5-10.128l1.272 1.272M21 21l-1.272-1.272" /></svg>
+                    </button>
+                </div>
+                {{-- PENAMBAHAN: x-ref dan @keydown.enter untuk memanggil aksi livewire --}}
+                <x-text-input wire:model.lazy="captcha" id="captcha" type="text" class="block mt-2 w-full" placeholder="Masukkan captcha di atas" required
+                    x-ref="captcha"
+                    @keydown.enter.prevent="$wire.sendVerificationCode()" />
+                <x-input-error :messages="$errors->get('captcha')" class="mt-2" />
+            {{-- Tombol Kirim & Form Verifikasi OTP --}}
+            @if(!$otpSent)
+                <button type="button" wire:click="sendVerificationCode" wire:loading.attr="disabled" class="w-full mt-4 px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50">
+                    <span wire:loading.remove wire:target="sendVerificationCode">Kirim Kode Verifikasi</span>
+                    <span wire:loading wire:target="sendVerificationCode">Mengirim...</span>
+                </button>
+            @else
+                <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <x-input-label for="otp" value="Masukkan Kode OTP" />
+                    <div class="flex items-center space-x-2">
+                        <x-text-input wire:model="otp" id="otp" class="block mt-1 w-full" type="text" required />
+                        <button type="button" wire:click="verifyOtp" wire:loading.attr="disabled" class="px-4 py-2 font-medium text-white bg-emerald-600 rounded-md hover:bg-emerald-700 disabled:opacity-50">
+                            <span wire:loading.remove wire:target="verifyOtp">Verifikasi</span>
+                            <span wire:loading wire:target="verifyOtp">Memeriksa...</span>
+                        </button>
+                    </div>
+                    <x-input-error :messages="$errors->get('otp')" class="mt-2" />
+                </div>
+            @endif
+
+            @else
+                <div class="p-4 text-center text-emerald-800 rounded-lg bg-emerald-50">
+                    <p class="font-medium">✅ Akun Anda sudah terverifikasi.</p>
+                </div>
+            @endif
         </div>
 
-
-        {{-- Bagian Informasi Admin Desa --}}
-        <div class="p-4 border rounded-lg bg-gray-50 mt-6">
-             <h3 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Informasi Admin Pengelola</h3>
-            <!-- Nama Admin -->
-            <div class="mt-4">
+        {{-- Bagian 3: Informasi Admin & Password --}}
+        <fieldset class="p-4 border rounded-lg bg-gray-50 space-y-4 @if(!$otpVerified) opacity-50 pointer-events-none @endif">
+            <legend class="text-lg font-semibold text-gray-800 px-2">3. Informasi Admin & Password</legend>
+            <div>
                 <x-input-label for="admin_name" value="Nama Lengkap Admin" />
-                <x-text-input wire:model="admin_name" id="admin_name" class="block mt-1 w-full" type="text" name="admin_name" required autocomplete="name" placeholder="Nama pengelola website desa" />
+                <x-text-input wire:model="admin_name" id="admin_name" class="block mt-1 w-full" type="text" required />
                 <x-input-error :messages="$errors->get('admin_name')" class="mt-2" />
             </div>
 
-            <!-- Email Admin -->
-            <div class="mt-4">
-                <x-input-label for="admin_email" value="Email Admin" />
-                <x-text-input wire:model="admin_email" id="admin_email" class="block mt-1 w-full" type="email" name="admin_email" required autocomplete="username" placeholder="Email untuk login admin" />
-                <x-input-error :messages="$errors->get('admin_email')" class="mt-2" />
-            </div>
-
-            <!-- Password Admin -->
-            <div class="mt-4">
-                <x-input-label for="admin_password" value="Password" />
-                <x-text-input wire:model="admin_password" id="admin_password" class="block mt-1 w-full" type="password" name="admin_password" required autocomplete="new-password" placeholder="Minimal 8 karakter" />
+            <div x-data="{ show: false }">
+                <x-input-label for="password" value="Password" />
+                <div class="relative mt-1">
+                    <x-text-input wire:model="admin_password" id="password" class="block w-full" x-bind:type="show ? 'text' : 'password'" required />
+                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                        <button type="button" @click="show = !show" class="text-gray-500 hover:text-gray-700">
+                            <svg x-show="!show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            <svg x-show="show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 1.845 0 3.543.586 4.968 1.584M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.58 17.58L6.42 6.42" /></svg>
+                        </button>
+                    </div>
+                </div>
                 <x-input-error :messages="$errors->get('admin_password')" class="mt-2" />
             </div>
 
-            <!-- Konfirmasi Password Admin -->
-            <div class="mt-4">
-                <x-input-label for="admin_password_confirmation" value="Konfirmasi Password" />
-                <x-text-input wire:model="admin_password_confirmation" id="admin_password_confirmation" class="block mt-1 w-full" type="password" name="admin_password_confirmation" required autocomplete="new-password" placeholder="Ulangi password" />
-                <x-input-error :messages="$errors->get('admin_password_confirmation')" class="mt-2" />
+            <div x-data="{ show: false }">
+                <x-input-label for="password_confirmation" value="Konfirmasi Password" />
+                 <div class="relative mt-1">
+                    <x-text-input wire:model="admin_password_confirmation" id="password_confirmation" class="block w-full" x-bind:type="show ? 'text' : 'password'" required />
+                     <div class="absolute inset-y-0 right-0 pr-3 flex items-center text-sm leading-5">
+                        <button type="button" @click="show = !show" class="text-gray-500 hover:text-gray-700">
+                            <svg x-show="!show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                            <svg x-show="show" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="display: none;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 1.845 0 3.543.586 4.968 1.584M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.58 17.58L6.42 6.42" /></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
-        </div>
+        </fieldset>
 
-        <div class="flex items-center justify-between pt-4">
-             <a class="text-sm font-medium text-emerald-600 hover:text-emerald-700" href="{{ route('login') }}" wire:navigate>
-                {{ __('Sudah punya akun?') }}
-            </a>
-
-            <button type="submit" class="inline-flex items-center px-6 py-2.5 bg-emerald-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                <svg wire:loading wire:target="registerDesa" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+        <div class="flex items-center justify-end pt-4">
+             <button type="submit"
+                class="inline-flex items-center px-6 py-2.5 bg-emerald-600 border border-transparent rounded-lg font-semibold text-sm text-white uppercase tracking-widest hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                {{ !$otpVerified ? 'disabled' : '' }}>
+                <svg wire:loading wire:target="register" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                 <span>Daftarkan Desa Saya</span>
             </button>
         </div>

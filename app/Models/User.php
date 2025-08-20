@@ -4,21 +4,24 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
+use Filament\Models\Contracts\HasTenants; // <-- Interface (Sudah Benar)
+use Illuminate\Support\Collection;
+use Filament\Panel; // <-- 1. TAMBAHKAN IMPORT INI
 
-class User extends Authenticatable
+class User extends Authenticatable implements HasTenants // <-- Implement interface (Sudah Benar)
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
+    // 2. HAPUS InteractsWithTenants DARI SINI
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
      */
     protected $fillable = [
         'name',
@@ -33,8 +36,6 @@ class User extends Authenticatable
 
     /**
      * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
      */
     protected $hidden = [
         'password',
@@ -43,8 +44,6 @@ class User extends Authenticatable
 
     /**
      * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
      */
     protected function casts(): array
     {
@@ -61,8 +60,24 @@ class User extends Authenticatable
     {
         return $this->belongsTo(Penduduk::class, 'penduduk_id');
     }
-     public function company(): BelongsTo
+
+    /**
+     * Get the company associated with the user.
+     */
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    // Method yang dibutuhkan oleh HasTenants (Sudah Benar)
+    public function getTenants(Panel $panel): Collection
+    {
+        return collect([$this->company]);
+    }
+
+    // Method ini untuk verifikasi akses (Sudah Benar)
+    public function canAccessTenant(Model $tenant): bool
+    {
+        return $this->company_id === $tenant->id;
     }
 }

@@ -12,7 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // TAMBAHKAN BARIS INI UNTUK MENDAFTARKAN MIDDLEWARE ANDA
+        $middleware->web(append: [
+            \App\Http\Middleware\SubdomainMiddleware::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

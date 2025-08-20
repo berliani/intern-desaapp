@@ -13,6 +13,7 @@ use App\Livewire\Warga\Profile;
 use App\Livewire\Warga\VerifikasiData;
 use App\Livewire\Warga\PengajuanBansos;
 use App\Livewire\Warga\BansosDetail;
+use App\Models\ProfilDesa;
 
 // Export Controllers
 use App\Http\Controllers\LayananExportController;
@@ -48,14 +49,33 @@ require __DIR__.'/auth.php';
 
 // Dashboard Redirect After Login
 Route::middleware(['auth', 'verified'])->group(function () {
+
+    // 2. Ganti logika route /dashboard yang lama dengan ini
     Route::get('/dashboard', function () {
-        // Admin langsung ke Filament panel
-        if (auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
+        $user = auth()->user();
+
+        // Cek jika user adalah admin atau super_admin
+        if ($user->hasAnyRole(['super_admin', 'admin'])) {
+
+            // Cek apakah profil desa sudah ada
+            $profilExists = ProfilDesa::where('company_id', $user->company_id)->exists();
+
+            // Jika profil BELUM ADA, paksa redirect ke halaman pembuatan profil
+            if (!$profilExists) {
+                return redirect()->route('desa.profil.create');
+            }
+
+            // Jika profil SUDAH ADA, baru arahkan ke panel admin Filament
             return redirect('/admin');
         }
+
         // Warga dan unverified ke dashboard warga
         return redirect('/warga/dashboard');
+
     })->name('dashboard');
+
+    // Definisikan route untuk halaman pembuatan profil dan dashboard admin
+    Volt::route('desa/profil/create', 'desa.create-profil')->name('desa.profil.create');
     Volt::route('desa/dashboard', 'desa.dashboard')->name('admin.dashboard');
 });
 
