@@ -101,10 +101,10 @@ class ProfilDesa extends Model
     {
         return $this->hasOne(StrukturPemerintahan::class, 'profil_desa_id');
     }
-
-    /**
-     * Mendapatkan nama lengkap desa dengan format "Desa X, Kecamatan Y, Kabupaten Z"
-     */
+ public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
     public function getNamaLengkap(): string
     {
         $namaDesa = $this->nama_desa ?? '-';
@@ -114,9 +114,7 @@ class ProfilDesa extends Model
         return "Desa {$namaDesa}, Kecamatan {$kecamatan}, Kabupaten {$kabupaten}";
     }
 
-    /**
-     * Menghitung kepadatan penduduk (jika data luas wilayah tersedia dari relasi)
-     */
+
     public function getKepadatanPenduduk(int $jumlahPenduduk = 0): ?float
     {
         $batasWilayah = $this->batasWilayahPotensi;
@@ -124,7 +122,6 @@ class ProfilDesa extends Model
             return null;
         }
 
-        // Coba ambil jumlah penduduk dari relasi jika belum disediakan
         if ($jumlahPenduduk <= 0) {
             $jumlahPenduduk = $this->penduduk()->count();
             if ($jumlahPenduduk <= 0) {
@@ -139,19 +136,17 @@ class ProfilDesa extends Model
         return round($jumlahPenduduk / $luasKm2, 2);
     }
 
-    /**
-     * Mendapatkan luas wilayah dalam format yang mudah dibaca
-     */
+
     public function getLuasWilayahFormatted(): string
     {
         if (!$this->luas_wilayah) {
             return '-';
         }
 
-        // Format dalam m²
+
         $luasM2 = number_format($this->luas_wilayah, 0, ',', '.');
 
-        // Konversi ke hektar
+
         $luasHa = number_format($this->luas_wilayah / 10000, 2, ',', '.');
 
         return "{$luasM2} m² ({$luasHa} ha)";
