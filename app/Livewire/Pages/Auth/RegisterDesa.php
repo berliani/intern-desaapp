@@ -4,7 +4,6 @@ namespace App\Livewire\Pages\Auth;
 
 use Livewire\Component;
 use App\Models\User;
-use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -19,10 +18,6 @@ use Twilio\Rest\Client as TwilioClient;
 #[Layout('layouts.guest')]
 class RegisterDesa extends Component
 {
-    // Properti Informasi Desa
-    public string $nama_desa = '';
-    public string $subdomain = '';
-
     // Properti Informasi Admin
     public string $admin_name = '';
     public string $admin_email = '';
@@ -31,7 +26,7 @@ class RegisterDesa extends Component
     public string $telepon = '';
 
     // Properti untuk Verifikasi
-    public string $verificationMethod = 'email'; // 'email' atau 'whatsapp'
+    public string $verificationMethod = 'email';
     public string $generatedCaptcha = '';
     public string $captcha = '';
     public string $otp = '';
@@ -43,13 +38,6 @@ class RegisterDesa extends Component
     public function mount(): void
     {
         $this->generateCaptcha();
-    }
-
-    public function updatedNamaDesa($value): void
-    {
-        $this->subdomain = Str::slug($value);
-        // Mengirim event ke browser untuk memindahkan fokus
-        $this->dispatch('subdomain-filled');
     }
 
     public function generateCaptcha(): void
@@ -71,7 +59,7 @@ class RegisterDesa extends Component
         if ($this->verificationMethod === 'email') {
             $validated = $this->validate(['admin_email' => ['required', 'email', 'unique:users,email']]);
             $this->sendOtpByEmail($validated['admin_email']);
-        } else { // whatsapp
+        } else {
             $validated = $this->validate(['telepon' => ['required', 'string', 'unique:users,telepon', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
             $this->sendOtpByWhatsApp($validated['telepon']);
         }
@@ -101,8 +89,6 @@ class RegisterDesa extends Component
         }
 
         $validated = $this->validate([
-            'nama_desa' => ['required', 'string', 'max:100', 'unique:companies,name'],
-            'subdomain' => ['required', 'string', 'max:50', 'alpha_dash', 'unique:companies,subdomain'],
             'admin_name' => ['required', 'string', 'max:255'],
             'admin_email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255', 'unique:users,email'],
             'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string', 'unique:users,telepon'],
@@ -110,17 +96,11 @@ class RegisterDesa extends Component
         ]);
 
         DB::transaction(function () use ($validated) {
-            $company = Company::create([
-                'name' => $validated['nama_desa'],
-                'subdomain' => $validated['subdomain'],
-            ]);
-
             $adminUser = User::create([
                 'name' => $validated['admin_name'],
-                'email' => $validated['admin_email'] ?? "user-" . Str::random(5) . "@{$validated['subdomain']}.desa",
+                'email' => $validated['admin_email'] ?? "user-" . Str::random(5) . "@temp-desa.local",
                 'telepon' => $this->normalizePhoneNumber($validated['telepon'] ?? null),
                 'password' => Hash::make($validated['admin_password']),
-                'company_id' => $company->id,
             ]);
 
             $adminUser->assignRole('admin');
