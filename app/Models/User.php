@@ -50,6 +50,9 @@ class User extends Authenticatable implements HasTenants // <-- Implement interf
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+
+            //  'email' => 'encrypted',
+            // 'telepon' => 'encrypted',
         ];
     }
 
