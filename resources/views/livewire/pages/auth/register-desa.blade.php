@@ -97,6 +97,7 @@
                                 {{ $char }}
                             </span>
                         @endforeach
+                        @endif
                     </div>
                     <button type="button" wire:click="generateCaptcha" title="Refresh Captcha"
                         class="p-2 text-gray-600 bg-white border rounded-md hover:bg-gray-50">
