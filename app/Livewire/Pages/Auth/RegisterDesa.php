@@ -4,6 +4,7 @@ namespace App\Livewire\Pages\Auth;
 
 use Livewire\Component;
 use App\Models\User;
+use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
@@ -18,11 +19,11 @@ use Twilio\Rest\Client as TwilioClient;
 #[Layout('layouts.guest')]
 class RegisterDesa extends Component
 {
-    // Properti Informasi Admin
-    public string $admin_name = '';
-    public string $admin_email = '';
-    public string $admin_password = '';
-    public string $admin_password_confirmation = '';
+    public string $name = ''; 
+    public string $username = ''; 
+    public string $email = '';
+    public string $password = '';
+    public string $password_confirmation = '';
     public string $telepon = '';
 
     // Properti untuk Verifikasi
@@ -57,8 +58,8 @@ class RegisterDesa extends Component
         }
 
         if ($this->verificationMethod === 'email') {
-            $validated = $this->validate(['admin_email' => ['required', 'email', 'unique:users,email']]);
-            $this->sendOtpByEmail($validated['admin_email']);
+            $validated = $this->validate(['email' => ['required', 'email', 'unique:users,email']]);
+            $this->sendOtpByEmail($validated['email']);
         } else {
             $validated = $this->validate(['telepon' => ['required', 'string', 'unique:users,telepon', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
             $this->sendOtpByWhatsApp($validated['telepon']);
@@ -81,7 +82,7 @@ class RegisterDesa extends Component
         }
     }
 
-    public function register(): void
+    public function register()
     {
         if (!$this->otpVerified) {
             $this->addError('otp', 'Harap selesaikan verifikasi terlebih dahulu.');
@@ -89,18 +90,37 @@ class RegisterDesa extends Component
         }
 
         $validated = $this->validate([
-            'admin_name' => ['required', 'string', 'max:255'],
-            'admin_email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255', 'unique:users,email'],
+            'name' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
+            'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255', 'unique:users,email'],
             'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string', 'unique:users,telepon'],
-            'admin_password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'password' => [
+                'required',
+                'string',
+                'confirmed',
+                Rules\Password::min(8)
+                    ->mixedCase()
+                    ->numbers()
+                    ->symbols()
+            ],
+        ], [
+            'username.alpha_dash' => 'Username hanya boleh berisi huruf, angka, tanda hubung (-), dan garis bawah (_).',
+            'username.unique' => 'Username ini sudah digunakan.',
         ]);
 
         DB::transaction(function () use ($validated) {
+            $company = Company::create([
+                'name' => 'Desa ' . $validated['name'],
+                'subdomain' => 'desa-' . Str::slug($validated['username']) . '-' . Str::lower(Str::random(4)),
+            ]);
+
             $adminUser = User::create([
-                'name' => $validated['admin_name'],
-                'email' => $validated['admin_email'] ?? "user-" . Str::random(5) . "@temp-desa.local",
+                'name' => $validated['name'],
+                'username' => $validated['username'],
+                'email' => $validated['email'] ?? "user-" . Str::random(5) . "@{$company->subdomain}.desa",
                 'telepon' => $this->normalizePhoneNumber($validated['telepon'] ?? null),
-                'password' => Hash::make($validated['admin_password']),
+                'password' => Hash::make($validated['password']),
+                'company_id' => $company->id,
             ]);
 
             $adminUser->assignRole('admin');
@@ -108,7 +128,7 @@ class RegisterDesa extends Component
             Auth::login($adminUser);
         });
 
-        $this->redirect(route('desa.profil.create'));
+        return $this->redirect(route('desa.profil.create'));
     }
 
     // --- Helper Methods ---
@@ -149,7 +169,7 @@ class RegisterDesa extends Component
             return '62' . substr($number, 1);
         }
         if (substr($number, 0, 2) !== '62') {
-             return '62' . $number;
+            return '62' . $number;
         }
         return $number;
     }
