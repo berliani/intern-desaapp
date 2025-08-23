@@ -3,7 +3,6 @@
 namespace App\Livewire\Auth;
 
 use Livewire\Component;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class Login extends Component
@@ -14,9 +13,8 @@ class Login extends Component
 
     public function mount()
     {
-        if (Auth::check()) {
-            $this->redirect('/dashboard');
-        }
+        // Fungsi ini bisa dibiarkan kosong. Middleware Filament akan menangani
+        // pengguna yang sudah login.
     }
 
     public function login()
@@ -27,30 +25,13 @@ class Login extends Component
         ]);
 
         if (Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
-            // Regenerate session and clear any potential redirects
             session()->regenerate();
-            session()->forget('url.intended');
-            session()->forget('_previous');
 
-            // Direct redirection based on role WITHOUT using intended()
-            if (auth()->user()->hasAnyRole(['super_admin', 'admin'])) {
-                // Hapus semua state dan cache
-                session()->flush();  // Lebih kuat dari forget(), hapus semua session
-
-                // Redirect dengan JavaScript untuk memastikan page benar-benar di-reload
-                return response()->json([
-                    'redirect' => url('/admin?fresh=' . now()->timestamp)
-                ])->withHeaders([
-                    'HX-Redirect' => url('/admin?fresh=' . now()->timestamp),
-                    'X-Livewire-Redirect' => 'true'
-                ]);
-            } elseif (auth()->user()->hasRole('warga')) {
-                return redirect('/warga/dashboard');
-            } elseif (auth()->user()->hasRole('unverified')) {
-                return redirect('/verifikasi-data');
-            }
-
-            return redirect('/dashboard');
+            // PENTING: JANGAN LAKUKAN REDIRECT DI SINI.
+            // Biarkan method ini selesai. Filament akan secara otomatis
+            // mendeteksi login yang berhasil dan mengarahkan pengguna
+            // ke halaman yang benar (termasuk ke subdomain yang sesuai).
+            return;
         }
 
         $this->addError('email', trans('auth.failed'));

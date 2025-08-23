@@ -22,7 +22,9 @@ use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Navigation\MenuItem;
 use Filament\Enums\ThemeMode;
 use Filament\Navigation\NavigationItem;
-use App\Models\Company; // <-- TAMBAHKAN INI
+use App\Models\Company;
+use App\Http\Middleware\SubdomainMiddleware;
+use App\Livewire\Auth\Login; // Pastikan path ini benar
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -33,6 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->profile()
+            ->login(Login::class) // <-- Menggunakan komponen login kustom Anda
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([
                 'primary' => Color::Emerald,
@@ -68,6 +71,9 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
                 RoleMiddleware::class.':super_admin|admin',
+
+                // Middleware subdomain diletakkan di sini, setelah otentikasi
+                SubdomainMiddleware::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
@@ -89,8 +95,10 @@ class AdminPanelProvider extends PanelProvider
                 'Layanan Warga',
                 'Administrasi Sistem',
             ])
-            // TAMBAHKAN BLOK KODE DI BAWAH INI UNTUK MULTI-TENANCY
+
             ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'company')
+            ->tenantDomain('{tenant:subdomain}.desa.local')
+
             ->renderHook(
                 'panels::head.end',
                 fn () => '

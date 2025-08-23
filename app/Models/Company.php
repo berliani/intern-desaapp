@@ -4,23 +4,38 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Filament\Models\Contracts\HasName;
 
-class Company extends Model
+class Company extends Model implements HasName
 {
     use HasFactory;
 
-    /**
-     * The table associated with the model.
-     */
-    protected $table = 'companies';
-
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'name',
         'subdomain',
     ];
+
+    /**
+     * Get the display name for the tenant.
+     */
+    public function getFilamentName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Get the users that belong to the company.
+     */
+    public function users()
+    {
+        return $this->hasMany(User::class);
+    }
+
+    /**
+     * Get the profile for the company.
+     */
+    public function profilDesa()
+    {
+        return $this->hasOne(ProfilDesa::class);
+    }
 }
