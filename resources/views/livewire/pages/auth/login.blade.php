@@ -11,8 +11,7 @@ use Illuminate\Auth\Events\Lockout;
 
 new #[Layout('layouts.guest')] class extends Component
 {
-    // ✨ DIUBAH: Properti diubah menjadi 'username'
-    public string $username = '';
+    public string $loginField = '';
     public string $password = '';
     public bool $remember = false;
 
@@ -36,13 +35,12 @@ new #[Layout('layouts.guest')] class extends Component
     public function login()
     {
         try {
-            // ✨ DIUBAH: Validasi sekarang menggunakan 'username'
             $this->validate([
-                'username' => 'required|string',
+                'loginField' => 'required|string',
                 'password'   => 'required|string',
                 'captcha'    => 'required|string|in:' . session('captcha'),
             ], [
-                'username.required' => 'Username wajib diisi.',
+                'loginField.required' => 'Username atau Email wajib diisi.',
                 'password.required'   => 'Password wajib diisi.',
                 'captcha.in'          => 'Kode Captcha yang Anda masukkan salah.',
                 'captcha.required'    => 'Kode Captcha wajib diisi.',
@@ -56,17 +54,17 @@ new #[Layout('layouts.guest')] class extends Component
 
         $this->ensureIsNotRateLimited();
 
-        // ✨ DIUBAH: Kredensial sekarang menggunakan 'username'
+        $isEmail = filter_var($this->loginField, FILTER_VALIDATE_EMAIL);
+
         $credentials = [
-            'username' => $this->username,
+            $isEmail ? 'email' : 'username' => $this->loginField, 
             'password' => $this->password,
         ];
 
         if (!Auth::attempt($credentials, $this->remember)) {
             RateLimiter::hit($this->throttleKey());
 
-            // ✨ DIUBAH: Pesan error sekarang merujuk ke 'username'
-            $this->addError('username', trans('auth.failed'));
+            $this->addError('loginField', trans('auth.failed'));
             $this->generateCaptcha();
             return;
         }
@@ -89,8 +87,7 @@ new #[Layout('layouts.guest')] class extends Component
         event(new Lockout(request()));
         $seconds = RateLimiter::availableIn($this->throttleKey());
         throw ValidationException::withMessages([
-            // ✨ DIUBAH: Pesan throttle merujuk ke 'username'
-            'username' => trans('auth.throttle', [
+            'loginField' => trans('auth.throttle', [
                 'seconds' => $seconds,
                 'minutes' => ceil($seconds / 60),
             ]),
@@ -99,8 +96,7 @@ new #[Layout('layouts.guest')] class extends Component
 
     protected function throttleKey(): string
     {
-        // ✨ DIUBAH: Kunci throttle sekarang menggunakan 'username'
-        return Str::transliterate(Str::lower($this->username) . '|' . request()->ip());
+        return Str::transliterate(Str::lower($this->loginField) . '|' . request()->ip());
     }
 }; ?>
 
@@ -129,28 +125,26 @@ new #[Layout('layouts.guest')] class extends Component
     <form wire:submit="login" class="space-y-5">
         @csrf
         
-        <!-- ✨ DIUBAH: Input untuk Username -->
         <div>
-            <x-input-label for="username" :value="__('Username')" class="text-gray-700 font-medium mb-1" />
+            <x-input-label for="loginField" :value="__('Username atau Email')" class="text-gray-700 font-medium mb-1" />
             <div class="relative">
                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <svg class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
                 <x-text-input
-                    wire:model="username"
-                    id="username"
+                    wire:model="loginField"
+                    id="loginField"
                     class="block w-full pl-10 pr-3 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
                     type="text"
-                    name="username"
+                    name="loginField"
                     required
                     autofocus
                     autocomplete="username"
-                    placeholder="Masukkan Username Anda" />
+                    placeholder="Masukkan username atau email Anda" />
             </div>
-            <x-input-error :messages="$errors->get('username')" class="mt-2" />
+            <x-input-error :messages="$errors->get('loginField')" class="mt-2" />
         </div>
 
-        <!-- Password (Tidak diubah) -->
         <div>
             <x-input-label for="password" :value="__('Password')" class="text-gray-700 font-medium mb-1" />
             <div class="relative" x-data="{ showPassword: false }">
@@ -175,7 +169,6 @@ new #[Layout('layouts.guest')] class extends Component
             <x-input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
-        <!-- Captcha (Tidak diubah) -->
         <div class="mt-4">
             <label for="captcha" class="block text-sm font-medium text-gray-700">Verifikasi Captcha</label>
             <div class="flex items-center space-x-4 mt-1">
@@ -202,7 +195,6 @@ new #[Layout('layouts.guest')] class extends Component
             <x-input-error :messages="$errors->get('captcha')" class="mt-2" />
         </div>
 
-        <!-- Remember Me (Tidak diubah) -->
         <div class="flex items-center justify-between">
             <label for="remember" class="flex items-center">
                 <input wire:model="remember" id="remember" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500" name="remember">
@@ -215,7 +207,6 @@ new #[Layout('layouts.guest')] class extends Component
             @endif
         </div>
 
-        <!-- Submit Button (Tidak diubah) -->
         <div class="pt-2">
             <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200">
                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
@@ -223,7 +214,6 @@ new #[Layout('layouts.guest')] class extends Component
             </button>
         </div>
 
-        <!-- Register Link (Tidak diubah) -->
         @if (Route::has('register'))
             <div class="text-center mt-6">
                 <p class="text-sm text-gray-600">
