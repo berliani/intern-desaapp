@@ -4,7 +4,6 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\KeuanganDesaResource\Pages;
 use App\Models\KeuanganDesa;
-use App\Models\ProfilDesa;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -17,26 +16,20 @@ use Filament\Forms\Components\Grid;
 use Filament\Support\RawJs;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
-use App\Filament\Resources\KeuanganDesaResource\Widgets\KeuanganStats;
 use Carbon\Carbon;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Collection;
+use Filament\Facades\Filament;
 
 class KeuanganDesaResource extends Resource
 {
     protected static ?string $model = KeuanganDesa::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-banknotes';
-
     protected static ?string $navigationGroup = 'Desa';
-
     protected static ?string $recordTitleAttribute = 'deskripsi';
-
     protected static ?string $modelLabel = 'Keuangan Desa';
-
     protected static ?string $pluralModelLabel = 'Keuangan Desa';
-
     protected static ?int $navigationSort = 4;
 
     public static function getNavigationLabel(): string
@@ -46,6 +39,7 @@ class KeuanganDesaResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
+
         return static::getModel()::count();
     }
 
@@ -57,10 +51,7 @@ class KeuanganDesaResource extends Resource
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                Forms\Components\Select::make('id_desa')
-                                    ->label('Desa')
-                                    ->options(ProfilDesa::pluck('nama_desa', 'id'))
-                                    ->required(),
+                                // Forms\Components\Select::make('id_desa') // <-- DIHAPUS, tidak perlu lagi memilih desa
                                 Forms\Components\Select::make('jenis')
                                     ->options([
                                         'Pemasukan' => 'Pemasukan',
@@ -79,12 +70,8 @@ class KeuanganDesaResource extends Resource
                                     ->prefix('Rp')
                                     ->mask(RawJs::make(<<<'JS'
                                     function (value) {
-                                        // Hapus semua karakter non-digit
                                         let numericValue = value.replace(/\D/g, '');
-
-                                        // Format dengan separator titik setiap 3 digit
                                         if (numericValue === '') return '';
-
                                         return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                     }
                                     JS))
@@ -119,12 +106,9 @@ class KeuanganDesaResource extends Resource
 
     public static function table(Table $table): Table
     {
+
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('desa.nama_desa')
-                    ->label('Desa')
-                    ->sortable()
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('jenis')
                     ->badge()
                     ->colors([
@@ -147,10 +131,6 @@ class KeuanganDesaResource extends Resource
                     ->label('Dibuat Oleh')
                     ->sortable()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime('d/m/Y H:i')
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 SelectFilter::make('jenis')
@@ -438,13 +418,6 @@ class KeuanganDesaResource extends Resource
             });
     }
 
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
     public static function getPages(): array
     {
         return [
@@ -455,18 +428,15 @@ class KeuanganDesaResource extends Resource
         ];
     }
 
+
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
+        return parent::getEloquentQuery()->where('company_id', Filament::getTenant()->id);
     }
-
     public static function getWidgets(): array
     {
         return [
-            KeuanganStats::class,
+            InventarisResource\Widgets\InventarisStats::class,
         ];
     }
 }

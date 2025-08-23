@@ -1,2 +1,32 @@
 <?php
-return sg_load('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');
+
+namespace App\Filament\Resources\InventarisResource\Pages;
+
+use App\Filament\Resources\InventarisResource;
+use Filament\Actions;
+use Filament\Resources\Pages\CreateRecord;
+use Filament\Facades\Filament;
+
+class CreateInventaris extends CreateRecord
+{
+    protected static string $resource = InventarisResource::class;
+
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['company_id'] = Filament::getTenant()->id;
+        $data['created_by'] = auth()->id();
+
+  
+        if (isset($data['nominal_harga'])) {
+            $data['nominal_harga'] = (float) str_replace(['Rp', '.', ','], ['', '', '.'], $data['nominal_harga']);
+        }
+
+        return $data;
+    }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('view', ['record' => $this->record]);
+    }
+}

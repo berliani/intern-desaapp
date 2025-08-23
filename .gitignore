@@ -3,3 +3,5 @@
 .env
 .env.*
 /public/storage
+composer.lock
+composer.json

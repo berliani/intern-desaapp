@@ -22,17 +22,26 @@ use App\Filament\Resources\PengaduanResource\Widgets\PengaduanStats;
 use App\Filament\Resources\PengaduanResource\Widgets\PengaduanChart;
 use App\Filament\Resources\LayananDesaResource\Widgets\LayananStats;
 use App\Filament\Resources\LayananDesaResource\Widgets\LayananChart;
+use Filament\Facades\Filament;
+use Illuminate\Contracts\Support\Htmlable;
 
 class Dashboard extends BaseDashboard
 {
     protected static ?string $navigationIcon = 'heroicon-o-squares-2x2';
     protected static ?string $navigationLabel = 'Dashboard';
-    protected static ?string $title = 'Dashboard Desa Digital';
+    // protected static ?string $title = 'Dashboard Desa Digital'; // Dihapus karena sudah dinamis
     protected static ?string $navigationGroup = 'Dashboard';
     protected static ?int $navigationSort = 1;
 
     // Tab property untuk pelacakan tab aktif
     public ?string $activeTab = 'keuangan';
+
+    // Method untuk mengganti judul secara dinamis
+    public function getTitle(): string | Htmlable
+    {
+        $tenant = Filament::getTenant();
+        return $tenant ? 'Dashboard ' . $tenant->getFilamentName() : 'Dashboard';
+    }
 
     // Metode untuk mengganti tab aktif
     public function switchTab(string $tabId): void
