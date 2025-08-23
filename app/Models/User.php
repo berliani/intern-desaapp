@@ -10,22 +10,23 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
-use Filament\Models\Contracts\HasTenants; // <-- Interface (Sudah Benar)
+use Filament\Models\Contracts\HasTenants; 
 use Illuminate\Support\Collection;
-use Filament\Panel; // <-- 1. TAMBAHKAN IMPORT INI
+use Filament\Panel; 
 
-class User extends Authenticatable implements HasTenants // <-- Implement interface (Sudah Benar)
+class User extends Authenticatable implements HasTenants 
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
-    // 2. HAPUS InteractsWithTenants DARI SINI
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
 
     /**
      * The attributes that are mass assignable.
      */
+    
     protected $fillable = [
         'name',
+        'username',
         'email',
+        'telepon', 
         'password',
         'company_id',
         'penduduk_id',
