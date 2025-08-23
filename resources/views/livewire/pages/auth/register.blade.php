@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Models\Penduduk;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB; // <-- Pastikan ini di-import
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
@@ -17,10 +18,24 @@ new #[Layout('layouts.guest')] class extends Component
     public string $password = '';
     public string $password_confirmation = '';
 
+    /**
+     * Mengisi nama secara otomatis ketika NIK ditemukan.
+     * Logika ini sudah disiapkan untuk bekerja setelah tabel 'penduduk' dienkripsi.
+     */
     public function updatedNik()
     {
         if (strlen($this->nik) === 16) {
-            $penduduk = Penduduk::where('nik', $this->nik)->first();
+            $penduduk = null;
+            // Cek apakah tabel penduduk sudah memiliki kolom hash
+            if (DB::getSchemaBuilder()->hasColumn('penduduk', 'nik_search_hash')) {
+                $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                $searchHash = hash_hmac('sha256', $this->nik, $pepperKey);
+                $penduduk = Penduduk::where('nik_search_hash', $searchHash)->first();
+            } else {
+                // Fallback ke cara lama jika tabel penduduk belum dimigrasi
+                $penduduk = Penduduk::where('nik', $this->nik)->first();
+            }
+
             if ($penduduk) {
                 $this->name = $penduduk->nama;
             }
@@ -34,28 +49,53 @@ new #[Layout('layouts.guest')] class extends Component
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'nik' => ['required', 'string', 'size:16'],
+            'email' => [
+                'required', 'string', 'lowercase', 'email', 'max:255',
+                // PERBAIKAN: Validasi keunikan email menggunakan hash
+                function ($attribute, $value, $fail) {
+                    $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                    $searchHash = hash_hmac('sha256', $value, $pepperKey);
+                    if (DB::table('users')->where('email_search_hash', $searchHash)->exists()) {
+                        $fail('Email yang Anda masukkan sudah terdaftar.');
+                    }
+                }
+            ],
+            'nik' => [
+                'required', 'string', 'size:16',
+                // PERBAIKAN: Validasi keunikan NIK menggunakan hash
+                function ($attribute, $value, $fail) {
+                    $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                    $searchHash = hash_hmac('sha256', $value, $pepperKey);
+                    if (DB::table('users')->where('nik_search_hash', $searchHash)->exists()) {
+                        $fail('NIK yang Anda masukkan sudah terdaftar.');
+                    }
+                }
+            ],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
 
-        // Cek NIK di database penduduk
-        $penduduk = Penduduk::where('nik', $this->nik)->first();
+        
+        $penduduk = null;
+        if (DB::getSchemaBuilder()->hasColumn('penduduk', 'nik_search_hash')) {
+            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+            $nikSearchHash = hash_hmac('sha256', $this->nik, $pepperKey);
+            $penduduk = Penduduk::where('nik_search_hash', $nikSearchHash)->first();
+        } else {
+            $penduduk = Penduduk::where('nik', $this->nik)->first();
+        }
+        
         $validated['penduduk_id'] = $penduduk?->id;
         $validated['nik'] = $this->nik;
 
         $user = User::create($validated);
 
-        // Semua user baru mendapat role unverified
         if ($penduduk) {
-            // Jika NIK terdaftar, berikan role warga
             $user->assignRole('warga');
             session()->flash('message', 'Pendaftaran berhasil! Data NIK ditemukan, akun Anda sudah terverifikasi.');
             $redirectTo = '/warga/dashboard';
         } else {
-            // Jika NIK belum terdaftar, berikan role unverified
             $user->assignRole('unverified');
             session()->flash('warning', 'Pendaftaran berhasil! Silakan lengkapi data verifikasi Anda melalui menu Verifikasi Data.');
             $redirectTo = '/verifikasi-data';
