@@ -7,6 +7,7 @@ use App\Models\VerifikasiPenduduk;
 use App\Models\Company;
 use App\Models\ProfilDesa; // <-- DITAMBAHKAN
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Illuminate\Http\Request;
 
@@ -38,6 +39,7 @@ class VerifikasiData extends Component
         $user = Auth::user();
         $this->nama = $user->name;
         $this->email = $user->email;
+        $this->nik = $user->nik; // Mengambil NIK dari user yang login
 
         $this->verifikasiPending = VerifikasiPenduduk::where('user_id', Auth::id())
             ->whereIn('status', ['pending', 'approved'])
@@ -53,7 +55,6 @@ class VerifikasiData extends Component
     protected function rules()
     {
         return [
-            'nik' => 'required|string|size:16|unique:verifikasi_penduduk,nik',
             'kk' => 'required|string|size:16',
             'nama' => 'required|string|max:255',
             'tempat_lahir' => 'required|string|max:100',
@@ -69,6 +70,23 @@ class VerifikasiData extends Component
             'no_hp' => 'nullable|string|max:15',
             'email' => 'required|email|max:255',
             'golongan_darah' => 'nullable|string|max:3',
+            // --- Validasi keunikan NIK menggunakan hash ---
+            'nik' => [
+                'required', 'string', 'size:16',
+                function ($attribute, $value, $fail) {
+                    $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                    $searchHash = hash_hmac('sha256', $value, $pepperKey);
+                    
+                    // Cek hanya jika user ini belum pernah mengajukan verifikasi
+                    if (!$this->verifikasiPending) {
+                        $existsInPenduduk = DB::table('penduduk')->where('nik_search_hash', $searchHash)->exists();
+                        $existsInVerifikasi = DB::table('verifikasi_penduduk')->where('nik_search_hash', $searchHash)->exists();
+                        if ($existsInPenduduk || $existsInVerifikasi) {
+                            $fail('NIK yang Anda masukkan sudah terdaftar atau sedang dalam proses verifikasi.');
+                        }
+                    }
+                }
+            ],
         ];
     }
 
@@ -89,12 +107,15 @@ class VerifikasiData extends Component
                 throw new \Exception('Profil desa untuk wilayah ini belum lengkap. Hubungi admin.');
             }
 
-            VerifikasiPenduduk::create(array_merge($validatedData, [
-                'user_id' => Auth::id(),
-                'company_id' => $company->id,
-                'id_desa' => $profilDesa->id, // <-- FIX: Menambahkan id_desa yang benar
-                'status' => 'pending'
-            ]));
+            // Menggunakan updateOrCreate untuk mencegah duplikasi data jika user me-refresh halaman
+            VerifikasiPenduduk::updateOrCreate(
+                ['user_id' => Auth::id()], // Kunci untuk mencari
+                array_merge($validatedData, [ // Data untuk diisi atau diperbarui
+                    'company_id' => $company->id,
+                    'id_desa' => $profilDesa->id,
+                    'status' => 'pending'
+                ])
+            );
 
             session()->flash('message', 'Data verifikasi berhasil dikirim dan akan segera diproses oleh admin.');
             $this->mount(); // Refresh komponen
