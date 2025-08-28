@@ -72,55 +72,71 @@ class User extends Authenticatable implements HasTenants
     {
         return $this->company_id === $tenant->id;
     }
- 
+
     private static ?EnkripsiIMS $encryptorInstance = null;
-    
-    private static function getEncryptor(): EnkripsiIMS {
+    private static ?string $pepperKey = null;
+
+    private static function getEncryptor(): EnkripsiIMS
+    {
         if (self::$encryptorInstance === null) {
-            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
-            if (!$key) { throw new \Exception("Kunci enkripsi tidak valid."); }
-            self::$encryptorInstance = new EnkripsiIMS($key);
+            $encryptionKey = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$encryptionKey) { throw new \Exception("Kunci enkripsi IMS_ENCRYPTION_KEY tidak valid."); }
+            self::$encryptorInstance = new EnkripsiIMS($encryptionKey);
         }
         return self::$encryptorInstance;
     }
 
-    public function getNikAttribute()
+    private static function getPepperKey(): string
+    {
+        if (self::$pepperKey === null) {
+            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+            if (!$pepperKey) { throw new \Exception("Pepper key IMS_PEPPER_KEY tidak valid."); }
+            self::$pepperKey = $pepperKey;
+        }
+        return self::$pepperKey;
+    }
+
+    public function setNikAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['nik_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['nik_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            if (strlen($value) >= 8) {
+                $prefix = substr($value, 0, 8);
+                $this->attributes['nik_prefix_hash'] = hash_hmac('sha256', $prefix, self::getPepperKey());
+            }
+        }
+    }
+    public function getNikAttribute($value)
     {
         $encrypted = $this->attributes['nik_encrypted'] ?? null;
-        if ($encrypted) {
-            try {
-                return self::getEncryptor()->decrypt($encrypted);
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-        return null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
     }
 
-    public function getEmailAttribute()
+    public function setEmailAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['email_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+    public function getEmailAttribute($value)
     {
         $encrypted = $this->attributes['email_encrypted'] ?? null;
-        if ($encrypted) {
-            try {
-                return self::getEncryptor()->decrypt($encrypted);
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-        return null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
     }
 
-    public function getTeleponAttribute()
+    public function setTeleponAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['telepon_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['telepon_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+    public function getTeleponAttribute($value)
     {
         $encrypted = $this->attributes['telepon_encrypted'] ?? null;
-        if ($encrypted) {
-            try {
-                return self::getEncryptor()->decrypt($encrypted);
-            } catch (\Exception $e) {
-                return null;
-            }
-        }
-        return null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
     }
 
     protected static function booted(): void

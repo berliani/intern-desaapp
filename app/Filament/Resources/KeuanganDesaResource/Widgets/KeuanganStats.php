@@ -8,6 +8,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
+use Filament\Facades\Filament;
 
 class KeuanganStats extends BaseWidget
 {
@@ -95,26 +96,25 @@ class KeuanganStats extends BaseWidget
         }
     }
 
-    protected function getStats(): array
+   protected function getStats(): array
     {
-        // Periode untuk ditampilkan
+        $tenantId = Filament::getTenant()->id;
         $periodeText = $this->getPeriodeDisplayText();
 
-        // Total keseluruhan (tidak difilter)
-        $totalPemasukan = DB::table('keuangan_desa')
+        // Total keseluruhan (sudah difilter per tenant)
+        $totalPemasukan = KeuanganDesa::where('company_id', $tenantId)
             ->whereIn('jenis', ['pemasukan', 'Pemasukan', 'PEMASUKAN'])
             ->sum('jumlah');
 
-        $totalPengeluaran = DB::table('keuangan_desa')
+        $totalPengeluaran = KeuanganDesa::where('company_id', $tenantId)
             ->whereIn('jenis', ['pengeluaran', 'Pengeluaran', 'PENGELUARAN'])
             ->sum('jumlah');
 
         $saldo = $totalPemasukan - $totalPengeluaran;
 
-        // Query untuk data filter
-        $filteredQuery = DB::table('keuangan_desa');
+        // Query untuk data filter (sudah difilter per tenant)
+        $filteredQuery = KeuanganDesa::where('company_id', $tenantId);
 
-        // Terapkan filter tanggal jika ada dan bukan "semua waktu"
         if ($this->periode !== 'semua_waktu' && $this->dariTanggal && $this->sampaiTanggal) {
             $filteredQuery->whereBetween('tanggal', [
                 Carbon::parse($this->dariTanggal)->startOfDay(),
@@ -122,7 +122,6 @@ class KeuanganStats extends BaseWidget
             ]);
         }
 
-        // Data untuk periode yang dipilih
         $pemasukanPeriode = $filteredQuery->clone()->whereIn('jenis', ['pemasukan', 'Pemasukan', 'PEMASUKAN'])->sum('jumlah');
         $pengeluaranPeriode = $filteredQuery->clone()->whereIn('jenis', ['pengeluaran', 'Pengeluaran', 'PENGELUARAN'])->sum('jumlah');
         $saldoPeriode = $pemasukanPeriode - $pengeluaranPeriode;

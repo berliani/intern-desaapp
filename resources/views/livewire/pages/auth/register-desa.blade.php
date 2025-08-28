@@ -55,15 +55,25 @@
                 <div class="mt-4">
                     @if($verificationMethod === 'email')
                         <div>
-                            {{-- ✨ DIUBAH: Menggunakan properti 'email' --}}
-                            <x-input-label for="email">
+                            <x-input-label for="admin_email">
                                 Alamat Email <span class="text-red-500">*</span>
                             </x-input-label>
-                            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" />
-                            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+                            <x-text-input wire:model="admin_email" id="admin_email" class="block mt-1 w-full" type="email" />
+                            <x-input-error :messages="$errors->get('admin_email')" class="mt-2" />
                         </div>
                     @endif
 
+                    @if($verificationMethod === 'whatsapp')
+                        <div>
+                            <x-input-label for="telepon">
+                                Nomor WhatsApp <span class="text-red-500">*</span>
+                            </x-input-label>
+                            <x-text-input wire:model="telepon" id="telepon" class="block mt-1 w-full" type="text"
+                                placeholder="Contoh: 081234567890" />
+                            <x-input-error :messages="$errors->get('telepon')" class="mt-2" />
+                        </div>
+                    @endif
+                </div>
                     @if($verificationMethod === 'whatsapp')
                         <div>
                             <x-input-label for="telepon">
@@ -80,8 +90,9 @@
                 <label for="captcha" class="block text-sm font-medium text-gray-700 mt-4">Verifikasi Captcha</label>
                 <div class="flex items-center space-x-4 mt-1">
                     <div class="flex items-center justify-around w-48 h-16 px-2 bg-gray-200 border rounded-md overflow-hidden"
-                        style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d4d8\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
-                        
+                        style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d4d8\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
+
+                        {{-- Menampilkan karakter captcha --}}
                         @if (!empty($generatedCaptcha))
                             @foreach (str_split($generatedCaptcha) as $char)
                                 @php
@@ -100,7 +111,7 @@
                                 </span>
                             @endforeach
                         @endif
-                        
+
                     </div>
                     <button type="button" wire:click="generateCaptcha" title="Refresh Captcha"
                         class="p-2 text-gray-600 bg-white border rounded-md hover:bg-gray-50">

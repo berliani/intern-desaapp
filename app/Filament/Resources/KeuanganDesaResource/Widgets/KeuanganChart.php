@@ -7,6 +7,7 @@ use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
+use Filament\Facades\Filament;
 
 class KeuanganChart extends ChartWidget
 {
@@ -62,12 +63,10 @@ class KeuanganChart extends ChartWidget
                 $this->sampaiTanggal = now()->subYear()->endOfYear()->toDateString();
                 break;
             default:
-                // Untuk kustom, tanggal akan ditetapkan secara manual
                 break;
         }
     }
 
-    // Menerima event filter dari KeuanganDesa page
     #[On('keuangan-filter-changed')]
     public function onFilterChanged(string $dari = '', string $sampai = ''): void
     {
@@ -78,7 +77,6 @@ class KeuanganChart extends ChartWidget
         }
     }
 
-    // Menerima event filter dari Dashboard
     #[On('filter-changed')]
     public function onDashboardFilterChanged(string $dari_tanggal = '', string $sampai_tanggal = '', string $periode = 'bulan_ini'): void
     {
@@ -88,29 +86,26 @@ class KeuanganChart extends ChartWidget
             $this->dariTanggal = $dari_tanggal;
             $this->sampaiTanggal = $sampai_tanggal;
         } else {
-            // Gunakan setPeriodeFilter untuk mengatur tanggal berdasarkan periode
             $this->setPeriodeFilter($periode);
         }
     }
 
     protected function getData(): array
     {
-        // Periksa apakah ini filter "semua waktu"
+        $tenantId = Filament::getTenant()->id;
+
         if ($this->periode === 'semua_waktu' || !$this->dariTanggal || !$this->sampaiTanggal) {
-            // Cari rentang waktu dari data yang ada
-            $earliestRecord = KeuanganDesa::orderBy('tanggal', 'asc')->first();
-            $latestRecord = KeuanganDesa::orderBy('tanggal', 'desc')->first();
+            $earliestRecord = KeuanganDesa::where('company_id', $tenantId)->orderBy('tanggal', 'asc')->first();
+            $latestRecord = KeuanganDesa::where('company_id', $tenantId)->orderBy('tanggal', 'desc')->first();
 
             if ($earliestRecord && $latestRecord) {
                 $startDate = Carbon::parse($earliestRecord->tanggal)->startOfDay();
                 $endDate = Carbon::parse($latestRecord->tanggal)->endOfDay();
             } else {
-                // Fallback jika tidak ada data
                 $startDate = now()->subYears(2)->startOfYear();
                 $endDate = now()->endOfYear();
             }
 
-            // Untuk data yang panjang, gunakan month atau year
             $diffInDays = $startDate->diffInDays($endDate);
 
             if ($diffInDays > 366 * 2) {
@@ -123,11 +118,8 @@ class KeuanganChart extends ChartWidget
                 $labelFormat = 'M Y';
             }
         } else {
-            // Tanggal awal dan akhir untuk query dari filter
             $startDate = Carbon::parse($this->dariTanggal)->startOfDay();
             $endDate = Carbon::parse($this->sampaiTanggal)->endOfDay();
-
-            // Tentukan unit waktu dan format SQL berdasarkan rentang tanggal
             $diffInDays = $startDate->diffInDays($endDate);
 
             if ($diffInDays <= 1) {
@@ -149,16 +141,15 @@ class KeuanganChart extends ChartWidget
             }
         }
 
-        // Override untuk tahun lalu
         if ($this->periode === 'tahun_lalu') {
             $unit = 'month';
             $sqlFormat = '%Y-%m-01';
             $labelFormat = 'M Y';
         }
 
-        // Query untuk pemasukan (dikelompokkan berdasarkan format tanggal)
         $pemasukan = DB::table('keuangan_desa')
             ->select(DB::raw("DATE_FORMAT(tanggal, '$sqlFormat') as date"), DB::raw('SUM(jumlah) as total'))
+            ->where('company_id', $tenantId)
             ->whereIn('jenis', ['pemasukan', 'Pemasukan', 'PEMASUKAN'])
             ->whereBetween('tanggal', [$startDate, $endDate])
             ->groupBy('date')
@@ -166,9 +157,9 @@ class KeuanganChart extends ChartWidget
             ->get()
             ->keyBy('date');
 
-        // Query untuk pengeluaran (dikelompokkan berdasarkan format tanggal)
         $pengeluaran = DB::table('keuangan_desa')
             ->select(DB::raw("DATE_FORMAT(tanggal, '$sqlFormat') as date"), DB::raw('SUM(jumlah) as total'))
+            ->where('company_id', $tenantId)
             ->whereIn('jenis', ['pengeluaran', 'Pengeluaran', 'PENGELUARAN'])
             ->whereBetween('tanggal', [$startDate, $endDate])
             ->groupBy('date')
@@ -176,18 +167,13 @@ class KeuanganChart extends ChartWidget
             ->get()
             ->keyBy('date');
 
-        // Buat rentang periode yang lengkap (termasuk periode tanpa data)
         $dateRange = $this->generateDateRange($startDate, $endDate, $unit, $labelFormat);
-
-        // Siapkan data untuk chart
         $pemasukanData = [];
         $pengeluaranData = [];
         $labels = [];
 
         foreach ($dateRange as $date => $formattedDate) {
             $labels[] = $formattedDate;
-
-            // Ambil data jika ada, 0 jika tidak
             $pemasukanData[] = $pemasukan->get($date) ? $pemasukan->get($date)->total : 0;
             $pengeluaranData[] = $pengeluaran->get($date) ? $pengeluaran->get($date)->total : 0;
         }
@@ -215,13 +201,11 @@ class KeuanganChart extends ChartWidget
         ];
     }
 
-    // Helper untuk menghasilkan rentang tanggal lengkap
     protected function generateDateRange(Carbon $startDate, Carbon $endDate, string $unit, string $labelFormat = ''): array
     {
         $result = [];
         $current = clone $startDate;
 
-        // Format label untuk setiap unit waktu jika tidak diberikan
         if (!$labelFormat) {
             $labelFormat = match($unit) {
                 'hour' => 'H:i',
@@ -232,7 +216,6 @@ class KeuanganChart extends ChartWidget
             };
         }
 
-        // Format tanggal untuk key array
         $keyFormat = match($unit) {
             'hour' => 'Y-m-d H:00:00',
             'day' => 'Y-m-d',
@@ -241,12 +224,10 @@ class KeuanganChart extends ChartWidget
             default => 'Y-m-d',
         };
 
-        // Buat array dengan key tanggal dan value label
         while ($current <= $endDate) {
             $key = $current->format($keyFormat);
             $result[$key] = $current->format($labelFormat);
 
-            // Increment sesuai unit
             match($unit) {
                 'hour' => $current->addHour(),
                 'day' => $current->addDay(),

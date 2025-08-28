@@ -50,23 +50,24 @@ require __DIR__.'/auth.php';
 // Dashboard Redirect After Login
 Route::middleware(['auth', 'verified'])->group(function () {
 
-    // 2. Ganti logika route /dashboard yang lama dengan ini
+
     Route::get('/dashboard', function () {
         $user = auth()->user();
 
-        // Cek jika user adalah admin atau super_admin
+
         if ($user->hasAnyRole(['super_admin', 'admin'])) {
 
-            // Cek apakah profil desa sudah ada
-            $profilExists = ProfilDesa::where('company_id', $user->company_id)->exists();
 
-            // Jika profil BELUM ADA, paksa redirect ke halaman pembuatan profil
-            if (!$profilExists) {
-                return redirect()->route('desa.profil.create');
+             // Cek apakah user sudah punya company/desa
+            if ($user->company && $user->company->subdomain) {
+                // FIX: Buat URL lengkap ke admin panel di subdomainnya
+                $subdomain = $user->company->subdomain;
+                $url = "http://{$subdomain}." . config('app.domain', 'desa.local') . "/admin";
+                return redirect($url);
             }
 
-            // Jika profil SUDAH ADA, baru arahkan ke panel admin Filament
-            return redirect('/admin');
+            // Jika belum punya, arahkan ke halaman pembuatan profil
+            return redirect()->route('desa.profil.create');
         }
 
         // Warga dan unverified ke dashboard warga
