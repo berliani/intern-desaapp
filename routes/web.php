@@ -58,15 +58,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
         if ($user->hasAnyRole(['super_admin', 'admin'])) {
 
 
-             // Cek apakah user sudah punya company/desa
+
             if ($user->company && $user->company->subdomain) {
-                // FIX: Buat URL lengkap ke admin panel di subdomainnya
+
                 $subdomain = $user->company->subdomain;
                 $url = "http://{$subdomain}." . config('app.domain', 'desa.local') . "/admin";
                 return redirect($url);
             }
 
-            // Jika belum punya, arahkan ke halaman pembuatan profil
+            
             return redirect()->route('desa.profil.create');
         }
 

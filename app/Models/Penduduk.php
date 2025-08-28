@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
+use Carbon\Carbon;
 
 class Penduduk extends Model
 {
@@ -17,37 +18,43 @@ class Penduduk extends Model
     protected $table = 'penduduk';
 
     protected $fillable = [
-        'nik',
-        'kk',
-        'nama',
-        'alamat',
+        'company_id',
+        'id_desa',
+        'nik_encrypted',
+        'nik_search_hash',
+        'nik_prefix_hash',
+        'kk_encrypted',
+        'kk_search_hash',
         'rt_rw',
         'desa_kelurahan',
         'kecamatan',
-        'kabupaten',
+        'kabupaten', 
+        'provinsi',
+        'kepala_keluarga_id',
+        'nama',
+        'alamat',
+        'tanggal_lahir_encrypted',
+        'tanggal_lahir_search_hash',
         'tempat_lahir',
-        'tanggal_lahir',
         'jenis_kelamin',
         'agama',
         'status_perkawinan',
+        'kepala_keluarga',
         'pekerjaan',
         'pendidikan',
-        'id_desa',
-        'kepala_keluarga',
-        'kepala_keluarga_id',
-        'user_id',
-        'no_hp',
-        'email',
+        'no_hp_encrypted',
+        'no_hp_search_hash',
+        'email_encrypted',
+        'email_search_hash',
         'golongan_darah',
+        'user_id',
     ];
 
     protected $casts = [
-        'tanggal_lahir' => 'date',
         'kepala_keluarga' => 'boolean',
         'jenis_kelamin' => 'string',
     ];
 
-    // Helper method untuk jenis kelamin
     public function getJenisKelaminLabelAttribute()
     {
         return match($this->jenis_kelamin) {
@@ -57,7 +64,6 @@ class Penduduk extends Model
         };
     }
 
-    // Relasi-relasi tetap sama seperti sebelumnya
     public function desa(): BelongsTo
     {
         return $this->belongsTo(ProfilDesa::class, 'id_desa');
@@ -81,32 +87,6 @@ class Penduduk extends Model
         return $this->hasOne(User::class);
     }
 
-    public function bansos(): HasMany
-    {
-        return $this->hasMany(Bansos::class);
-    }
-
-    public function pengaduan(): HasMany
-    {
-        return $this->hasMany(Pengaduan::class);
-    }
-
-    public function umkm(): HasMany
-    {
-        return $this->hasMany(Umkm::class);
-    }
-
-    public function kartuKeluarga()
-    {
-        return $this->belongsTo(KartuKeluarga::class, 'kk', 'nomor_kk');
-    }
-
-    public function isKepalaKeluarga(): bool
-    {
-        return $this->kepala_keluarga;
-    }
-
-    // --- MULAI BLOK KODE ENKRIPSI YANG HILANG ---
     private static ?EnkripsiIMS $encryptorInstance = null;
     private static function getEncryptor(): EnkripsiIMS {
         if (self::$encryptorInstance === null) {
@@ -145,7 +125,6 @@ class Penduduk extends Model
             $this->attributes['kk_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
         }
     }
-    // get KK
     public function getKkAttribute($value) {
         $encrypted = $this->attributes['kk_encrypted'] ?? null;
         return $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
@@ -174,5 +153,17 @@ class Penduduk extends Model
         $encrypted = $this->attributes['email_encrypted'] ?? null;
         return $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
     }
-    // --- AKHIR BLOK KODE ENKRIPSI ---
+
+    // Tanggal lahir
+    public function setTanggalLahirAttribute($value) {
+        if (!empty($value)) {
+            $date = Carbon::parse($value)->format('Y-m-d');
+            $this->attributes['tanggal_lahir_encrypted'] = self::getEncryptor()->encrypt($date);
+        }
+    }
+    public function getTanggalLahirAttribute($value) {
+        $encrypted = $this->attributes['tanggal_lahir_encrypted'] ?? null;
+        $decrypted = $encrypted ? self::getEncryptor()->decrypt($encrypted) : $value;
+        return $decrypted ? Carbon::parse($decrypted) : null;
+    }
 }

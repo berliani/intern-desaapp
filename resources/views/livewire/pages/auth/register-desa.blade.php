@@ -1,4 +1,3 @@
-
 <div>
     {{-- Bagian Judul --}}
     <div class="mb-6">
@@ -55,7 +54,7 @@
                 <div class="mt-4">
                     @if($verificationMethod === 'email')
                         <div>
-                            <x-input-label for="admin_email">
+                            <x-input-label for="email">
                                 Alamat Email <span class="text-red-500">*</span>
                             </x-input-label>
                             <x-text-input wire:model="admin_email" id="admin_email" class="block mt-1 w-full" type="email" />
@@ -158,7 +157,6 @@
         <fieldset class="p-4 border rounded-lg bg-gray-50 space-y-4 @if(!$otpVerified) opacity-50 pointer-events-none @endif">
             <legend class="text-lg font-semibold text-gray-800 px-2">2. Informasi Admin & Password</legend>
 
-            {{-- ✨ DITAMBAHKAN: Field untuk Nama Lengkap --}}
             <div>
                 <x-input-label for="name">
                     Nama Lengkap <span class="text-red-500">*</span>
@@ -167,7 +165,6 @@
                 <x-input-error :messages="$errors->get('name')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field untuk Username --}}
             <div>
                 <x-input-label for="username">
                     Username Admin <span class="text-red-500">*</span>
@@ -177,7 +174,6 @@
                 <x-input-error :messages="$errors->get('username')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field Password dengan Tombol Show/Hide --}}
             <div x-data="{ show: false }">
                 <x-input-label for="password">
                     Password <span class="text-red-500">*</span>
@@ -194,7 +190,6 @@
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field Konfirmasi Password dengan Tombol Show/Hide --}}
             <div x-data="{ show: false }">
                 <x-input-label for="password_confirmation">
                     Konfirmasi Password <span class="text-red-500">*</span>

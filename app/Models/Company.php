@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\HasName;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Filament\Models\Contracts\HasName;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Company extends Model implements HasName
 {
@@ -26,7 +28,7 @@ class Company extends Model implements HasName
     /**
      * Get the users that belong to the company.
      */
-    public function users()
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
@@ -34,7 +36,7 @@ class Company extends Model implements HasName
     /**
      * Get the profile for the company.
      */
-    public function profilDesa()
+    public function profilDesa(): HasOne
     {
         return $this->hasOne(ProfilDesa::class);
     }

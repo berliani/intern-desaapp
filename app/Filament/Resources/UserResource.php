@@ -1,2 +1,206 @@
 <?php
-return sg_load('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');
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\UserResource\Pages;
+use App\IMS\EnkripsiIMS;
+use App\Mail\AccountStatusNotificationMail;
+use App\Models\User;
+use App\Models\VerifikasiPenduduk;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Form;
+use Filament\Notifications\Notification;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Twilio\Rest\Client as TwilioClient;
+use Illuminate\Database\Eloquent\Builder;
+
+class UserResource extends Resource
+{
+    protected static ?string $model = User::class;
+    protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static ?string $navigationGroup = 'Administrasi Sistem';
+    protected static ?int $navigationSort = 1;
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->whereDoesntHave('roles', function ($query) {
+            $query->where('name', 'super_admin');
+        });
+    }
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                TextInput::make('name')
+                    ->required()
+                    ->label('Nama')
+                    ->disabled(fn (string $context): bool => $context === 'edit')
+                    ->dehydrated(),
+
+                TextInput::make('username')
+                    ->required()
+                    ->unique(ignoreRecord: true)
+                    ->alphaDash()
+                    ->label('Username')
+                    ->disabled(fn (string $context): bool => $context === 'edit')
+                    ->dehydrated(),
+
+                TextInput::make('email')
+                    ->email()
+                    ->required()
+                    ->label('Email')
+                    ->disabled(fn (string $context): bool => $context === 'edit')
+                    ->dehydrated(fn (string $context): bool => $context === 'create')
+                    ->afterStateHydrated(function (TextInput $component, ?Model $record, string $context) {
+                        if ($context === 'edit' && $record) {
+                            $encryptedEmail = $record->getAttributeValue('email_encrypted');
+                            if ($encryptedEmail) {
+                                try {
+                                    $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
+                                    $encryptor = new EnkripsiIMS($key);
+                                    $decryptedEmail = $encryptor->decrypt($encryptedEmail);
+                                    $component->state($decryptedEmail);
+                                } catch (\Exception $e) {
+                                    $component->state('ERROR: Gagal Dekripsi');
+                                }
+                            }
+                        }
+                    }),
+
+                TextInput::make('password')
+                    ->password()
+                    ->dehydrateStateUsing(fn ($state) => Hash::make($state))
+                    ->dehydrated(fn ($state) => filled($state))
+                    ->required(fn (string $context): bool => $context === 'create')
+                    ->visibleOn('create'),
+
+                Select::make('roles')
+                    ->multiple()
+                    ->relationship('roles', 'name', fn (Builder $query) => $query->where('name', '!=', 'super_admin'))
+                    ->preload()
+                    ->label('Role Pengguna'),
+
+                Select::make('penduduk_id')
+                    ->relationship('penduduk', 'nama')
+                    ->searchable()
+                    ->preload()
+                    ->label('Data Penduduk Terkait')
+                    ->helperText('Isi jika user ini adalah warga desa')
+                    ->disabled()
+                    ->dehydrated(),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                TextColumn::make('name')->searchable()->sortable()->label('Nama'),
+                TextColumn::make('email')->searchable()->sortable(),
+                TextColumn::make('roles.name')->badge()->label('Role'),
+                IconColumn::make('penduduk_id')->boolean()->label('Warga Desa')->state(fn ($record): bool => $record->penduduk_id !== null),
+                TextColumn::make('created_at')->dateTime('d/m/Y H:i')->sortable()->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->filters([
+                Tables\Filters\SelectFilter::make('role')
+                    ->relationship('roles', 'name', fn (Builder $query) => $query->where('name', '!=', 'super_admin'))
+                    ->label('Filter berdasarkan Role'),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                
+                Tables\Actions\Action::make('tolak')
+                    ->label('Tolak')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->form([
+                        TextInput::make('catatan')
+                            ->label('Alasan Penolakan (Opsional)')
+                            ->helperText('Alasan ini akan dikirimkan ke warga.'),
+                    ])
+                    ->action(function (Model $record, array $data) {
+                        $verifikasi = VerifikasiPenduduk::where('user_id', $record->id)
+                            ->where('status', 'pending')
+                            ->first();
+                        
+                        if ($verifikasi) {
+                            $verifikasi->update([
+                                'status' => 'rejected', 
+                                'catatan' => $data['catatan']
+                            ]);
+
+                            self::sendAccountStatusNotification($record, 'ditolak', $data['catatan']);
+
+                            Notification::make()->title('Verifikasi Ditolak')->success()->send();
+                        } else {
+                            Notification::make()->title('Gagal')->body('Tidak ada data verifikasi pending untuk user ini.')->warning()->send();
+                        }
+                    })
+                    ->visible(fn (Model $record): bool => VerifikasiPenduduk::where('user_id', $record->id)->where('status', 'pending')->exists()),
+
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
+    }
+    
+    public static function getRelations(): array
+    {
+        return [];
+    }
+    
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListUsers::route('/'),
+            'create' => Pages\CreateUser::route('/create'),
+            'edit' => Pages\EditUser::route('/{record}/edit'),
+        ];
+    }
+
+    public static function sendAccountStatusNotification(Model $user, string $status, ?string $catatan = null): void
+    {
+        $namaWarga = $user->name;
+        $namaDesa = $user->company->name ?? 'Desa Digital';
+        $loginUrl = route('login');
+
+        if ($user->email) {
+            Mail::to($user->email)->send(new AccountStatusNotificationMail($namaWarga, $namaDesa, $status, $loginUrl, $catatan));
+        }
+
+        if ($user->telepon) {
+            try {
+                $sid    = env('TWILIO_SID');
+                $token  = env('TWILIO_AUTH_TOKEN');
+                $from   = env('TWILIO_WHATSAPP_FROM');
+                
+                if ($sid && $token && $from) {
+                    $body = $status === 'disetujui'
+                        ? "Selamat {$namaWarga}, akun Anda di portal {$namaDesa} telah berhasil diverifikasi. Silakan login untuk menggunakan semua layanan."
+                        : "Mohon maaf {$namaWarga}, pengajuan verifikasi akun Anda di portal {$namaDesa} ditolak." . ($catatan ? " Alasan: {$catatan}" : "");
+
+                    $client = new TwilioClient($sid, $token);
+                    $client->messages->create('whatsapp:+' . $user->telepon, [
+                        "from" => $from,
+                        "body" => $body
+                    ]);
+                }
+            } catch (\Exception $e) {
+                Notification::make()->title('Gagal Kirim WhatsApp')->body($e->getMessage())->danger()->send();
+            }
+        }
+    }
+}

@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -14,8 +16,6 @@ new #[Layout('layouts.guest')] class extends Component
     public string $loginField = '';
     public string $password = '';
     public bool $remember = false;
-
-    // Properti untuk CAPTCHA
     public string $captcha = '';
     public string $generatedCaptcha = '';
 
@@ -55,25 +55,29 @@ new #[Layout('layouts.guest')] class extends Component
         $this->ensureIsNotRateLimited();
 
         $isEmail = filter_var($this->loginField, FILTER_VALIDATE_EMAIL);
+        $user = null;
 
-        $credentials = [
-            $isEmail ? 'email' : 'username' => $this->loginField, 
-            'password' => $this->password,
-        ];
+        if ($isEmail) {
+            $emailSearchHash = hash('sha256', strtolower($this->loginField));
+            $user = User::where('email_search_hash', $emailSearchHash)->first();
+        } else {
+            $user = User::where('username', $this->loginField)->first();
+        }
 
-        if (!Auth::attempt($credentials, $this->remember)) {
+        if (!$user || !Hash::check($this->password, $user->password)) {
             RateLimiter::hit($this->throttleKey());
-
             $this->addError('loginField', trans('auth.failed'));
             $this->generateCaptcha();
             return;
         }
 
+        Auth::login($user, $this->remember);
+
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $user = auth()->user();
-        if ($user->hasAnyRole(['super_admin', 'admin'])) {
+        $loggedInUser = auth()->user();
+        if ($loggedInUser->hasAnyRole(['super_admin', 'admin'])) {
             return redirect()->to('/admin');
         }
         return $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
@@ -99,6 +103,7 @@ new #[Layout('layouts.guest')] class extends Component
         return Str::transliterate(Str::lower($this->loginField) . '|' . request()->ip());
     }
 }; ?>
+
 
 <div>
     <!-- Modern Welcome Header -->
