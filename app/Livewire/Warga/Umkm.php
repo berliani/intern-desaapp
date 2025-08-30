@@ -162,7 +162,7 @@ class Umkm extends Component
 
         try {
             $data = [
-                'id_desa' => $desa->id,
+                'desa_id' => $desa->id,
                 'penduduk_id' => $penduduk->id,
                 'user_id' => $user->id, // Tambahkan user_id agar konsisten
                 'nama_usaha' => $this->nama_usaha,

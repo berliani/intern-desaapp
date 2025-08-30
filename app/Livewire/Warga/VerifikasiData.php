@@ -76,7 +76,7 @@ class VerifikasiData extends Component
                 function ($attribute, $value, $fail) {
                     $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
                     $searchHash = hash_hmac('sha256', $value, $pepperKey);
-                    
+
                     // Cek hanya jika user ini belum pernah mengajukan verifikasi
                     if (!$this->verifikasiPending) {
                         $existsInPenduduk = DB::table('penduduk')->where('nik_search_hash', $searchHash)->exists();
@@ -112,7 +112,7 @@ class VerifikasiData extends Component
                 ['user_id' => Auth::id()], // Kunci untuk mencari
                 array_merge($validatedData, [ // Data untuk diisi atau diperbarui
                     'company_id' => $company->id,
-                    'id_desa' => $profilDesa->id,
+                    'desa_id' => $profilDesa->id,
                     'status' => 'pending'
                 ])
             );

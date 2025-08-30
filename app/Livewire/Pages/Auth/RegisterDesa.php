@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -19,8 +20,8 @@ use Twilio\Rest\Client as TwilioClient;
 #[Layout('layouts.guest')]
 class RegisterDesa extends Component
 {
-    public string $name = ''; 
-    public string $username = ''; 
+    public string $name = '';
+    public string $username = '';
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
@@ -58,10 +59,27 @@ class RegisterDesa extends Component
         }
 
         if ($this->verificationMethod === 'email') {
-            $validated = $this->validate(['email' => ['required', 'email', 'unique:users,email']]);
+            $validated = $this->validate(['email' => ['required', 'email', 'max:255']]);
+
+            // Cek keunikan secara manual menggunakan hash
+            $emailSearchHash = hash('sha256', strtolower($validated['email']));
+            if (User::where('email_search_hash', $emailSearchHash)->exists()) {
+                $this->addError('email', 'Alamat email ini sudah terdaftar.');
+                return;
+            }
+
             $this->sendOtpByEmail($validated['email']);
         } else {
-            $validated = $this->validate(['telepon' => ['required', 'string', 'unique:users,telepon', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
+            $validated = $this->validate(['telepon' => ['required', 'string', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
+            $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
+
+            // Cek keunikan secara manual menggunakan hash
+            $teleponSearchHash = hash('sha256', $normalizedPhone);
+            if (User::where('telepon_search_hash', $teleponSearchHash)->exists()) {
+                $this->addError('telepon', 'Nomor telepon ini sudah terdaftar.');
+                return;
+            }
+
             $this->sendOtpByWhatsApp($validated['telepon']);
         }
 
@@ -92,8 +110,8 @@ class RegisterDesa extends Component
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
-            'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255', 'unique:users,email'],
-            'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string', 'unique:users,telepon'],
+            'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255'],
+            'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string'],
             'password' => [
                 'required',
                 'string',
@@ -108,25 +126,33 @@ class RegisterDesa extends Component
             'username.unique' => 'Username ini sudah digunakan.',
         ]);
 
-        DB::transaction(function () use ($validated) {
-            $company = Company::create([
-                'name' => 'Desa ' . $validated['name'],
-                'subdomain' => 'desa-' . Str::slug($validated['username']) . '-' . Str::lower(Str::random(4)),
-            ]);
 
-            $adminUser = User::create([
+
+            // Siapkan data untuk kolom terenkripsi dan hash
+            $userData = [
                 'name' => $validated['name'],
                 'username' => $validated['username'],
-                'email' => $validated['email'] ?? "user-" . Str::random(5) . "@{$company->subdomain}.desa",
-                'telepon' => $this->normalizePhoneNumber($validated['telepon'] ?? null),
                 'password' => Hash::make($validated['password']),
-                'company_id' => $company->id,
-            ]);
+
+            ];
+
+            if (!empty($validated['email'])) {
+                $userData['email_encrypted'] = Crypt::encryptString($validated['email']);
+                $userData['email_search_hash'] = hash('sha256', strtolower($validated['email']));
+            }
+
+            if (!empty($validated['telepon'])) {
+                $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
+                $userData['telepon_encrypted'] = Crypt::encryptString($normalizedPhone);
+                $userData['telepon_search_hash'] = hash('sha256', $normalizedPhone);
+            }
+
+            $adminUser = User::create($userData);
 
             $adminUser->assignRole('admin');
             event(new Registered($adminUser));
             Auth::login($adminUser);
-        });
+        
 
         return $this->redirect(route('desa.profil.create'));
     }

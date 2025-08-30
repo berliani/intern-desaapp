@@ -13,6 +13,9 @@ use Carbon\Carbon;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Collection;
 use App\Models\Penduduk;
+use Illuminate\Database\Eloquent\Model;
+use Closure;
+use Filament\Facades\Filament;
 
 class ListPenduduks extends ListRecords
 {
@@ -30,10 +33,17 @@ class ListPenduduks extends ListRecords
         $this->applyPeriodeFilter('semua');
     }
 
-    // TAMBAHKAN METHOD INI: Mengatur link saat baris tabel diklik
-    protected function getTableRecordUrlUsing(): ?\Closure
+    /**
+     * --- INI PERBAIKAN UTAMANYA ---
+     * Mengganti penggunaan route() dengan getUrl() untuk memastikan
+     * parameter 'tenant' disertakan secara otomatis.
+     */
+    protected function getTableRecordUrlUsing(): ?Closure
     {
-        return fn ($record): string => route('filament.admin.resources.penduduks.view', ['record' => $record]);
+        return fn(Model $record): string => static::getResource()::getUrl('view', [
+            'record' => $record,
+            'tenant' => Filament::getTenant(),
+        ]);
     }
 
     // Method untuk menerapkan filter periode
@@ -110,20 +120,20 @@ class ListPenduduks extends ListRecords
                             'tahun_lalu' => 'Tahun Lalu',
                             'kustom' => 'Kustom',
                         ])
-                        ->default(fn () => $this->filterPeriode)
+                        ->default(fn() => $this->filterPeriode)
                         ->live()
-                        ->afterStateUpdated(fn ($state, callable $set) =>
-                            $state === 'kustom' ?: $set('dariTanggal', null) & $set('sampaiTanggal', null)),
+                        ->afterStateUpdated(fn($state, callable $set) =>
+                        $state === 'kustom' ?: $set('dariTanggal', null) & $set('sampaiTanggal', null)),
 
                     DatePicker::make('dariTanggal')
                         ->label('Dari Tanggal')
-                        ->default(fn () => $this->dariTanggal)
-                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
+                        ->default(fn() => $this->dariTanggal)
+                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
 
                     DatePicker::make('sampaiTanggal')
                         ->label('Sampai Tanggal')
-                        ->default(fn () => $this->sampaiTanggal)
-                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
+                        ->default(fn() => $this->sampaiTanggal)
+                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
                 ])
                 ->action(function (array $data): void {
                     $this->applyPeriodeFilter($data['periode'], $data['dariTanggal'] ?? null, $data['sampaiTanggal'] ?? null);

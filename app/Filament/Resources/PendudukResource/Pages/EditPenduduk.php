@@ -8,10 +8,35 @@ use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use App\Models\Penduduk;
+use Filament\Facades\Filament;
 
 class EditPenduduk extends EditRecord
 {
     protected static string $resource = PendudukResource::class;
+
+
+     protected function mutateFormDataBeforeFill(array $data): array
+    {
+
+        $data['nik'] = $this->record->nik;
+        $data['kk'] = $this->record->kk;
+        $data['tanggal_lahir'] = $this->record->tanggal_lahir;
+        $data['no_hp'] = $this->record->no_hp;
+        $data['email'] = $this->record->email;
+
+
+        $profilDesa = Filament::getTenant()?->profilDesa;
+
+        if ($profilDesa) {
+          
+            $data['desa_kelurahan'] = $profilDesa->nama_desa;
+            $data['kecamatan'] = $profilDesa->kecamatan;
+            $data['kabupaten'] = $profilDesa->kabupaten;
+            $data['provinsi'] = $profilDesa->provinsi;
+        }
+
+        return $data;
+    }
 
     protected function getHeaderActions(): array
     {
@@ -25,51 +50,50 @@ class EditPenduduk extends EditRecord
         ];
     }
 
-    protected function afterSave(): void
+     protected function afterSave(): void
     {
         $record = $this->record;
 
+        // --- PERBAIKAN LOGIKA KK ---
+        $plainKk = $this->form->getState()['kk'];
+        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+        if (!$pepperKey) {
+            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
+            return;
+        }
+        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
+
         if ($record->kepala_keluarga) {
-            // Jika ini kepala keluarga, atur self-reference jika belum
             if ($record->kepala_keluarga_id !== $record->id) {
                 $record->kepala_keluarga_id = $record->id;
                 $record->save();
             }
 
-            // Update semua anggota dengan KK yang sama
-            Penduduk::where('kk', $record->kk)
+            Penduduk::where('kk_search_hash', $kkSearchHash)
                 ->where('id', '!=', $record->id)
-                ->whereNull('kepala_keluarga_id')
                 ->update(['kepala_keluarga_id' => $record->id]);
         } else {
-            // Cek jika ada anggota yang terkait dengan KK ini
-            $dependentCount = Penduduk::where('kepala_keluarga_id', $record->id)
+             $dependentCount = Penduduk::where('kepala_keluarga_id', $record->id)
                 ->where('id', '!=', $record->id)
                 ->count();
 
             if ($dependentCount > 0) {
-                // Tampilkan peringatan jika ada anggota yang terkait
                 Notification::make()
                     ->title('Peringatan: Tidak dapat mengubah status')
                     ->body('Penduduk ini adalah kepala keluarga dengan ' . $dependentCount . ' anggota. Mohon pindahkan anggota ke kepala keluarga lain terlebih dahulu.')
                     ->danger()
                     ->send();
 
-                // Kembalikan status menjadi kepala keluarga
                 $record->kepala_keluarga = true;
                 $record->kepala_keluarga_id = $record->id;
                 $record->save();
             } else {
-                // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama
-                $kepalaKeluarga = Penduduk::where('kk', $record->kk)
+                $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
                     ->where('kepala_keluarga', true)
-                    ->where('id', '!=', $record->id)
                     ->first();
 
-                if ($kepalaKeluarga && $record->kepala_keluarga_id !== $kepalaKeluarga->id) {
-                    $record->kepala_keluarga_id = $kepalaKeluarga->id;
-                    $record->save();
-                }
+                $record->kepala_keluarga_id = $kepalaKeluarga?->id;
+                $record->save();
             }
         }
 

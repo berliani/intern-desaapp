@@ -27,10 +27,7 @@ class Login extends Component
         if (Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
             session()->regenerate();
 
-            // PENTING: JANGAN LAKUKAN REDIRECT DI SINI.
-            // Biarkan method ini selesai. Filament akan secara otomatis
-            // mendeteksi login yang berhasil dan mengarahkan pengguna
-            // ke halaman yang benar (termasuk ke subdomain yang sesuai).
+            
             return;
         }
 

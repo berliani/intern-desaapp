@@ -95,7 +95,7 @@ class PengajuanBansos extends Component
 
             // Buat data bantuan sosial
             BansosModel::create([
-                'id_desa' => $desa->id,
+                'desa_id' => $desa->id,
                 'penduduk_id' => $penduduk->id,
                 'jenis_bansos_id' => $this->selectedJenis,
                 'status' => 'Diajukan',

@@ -121,7 +121,7 @@ class LayananDesaFactory extends Factory
         $kontakNama = ['Pak Budi', 'Bu Siti', 'Pak Hendra', 'Kantor Desa', 'Admin Layanan'];
 
         return [
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'created_by' => User::factory(),
             'kategori' => $kategori,
             'nama_layanan' => $nama,

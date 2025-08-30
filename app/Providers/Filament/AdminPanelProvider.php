@@ -35,7 +35,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->profile()
-            ->login(Login::class) // <-- Menggunakan komponen login kustom Anda
+            ->login(Login::class)
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([
                 'primary' => Color::Emerald,
@@ -70,7 +70,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                RoleMiddleware::class.':super_admin|admin',
+                RoleMiddleware::class . ':super_admin|admin',
 
                 // Middleware subdomain diletakkan di sini, setelah otentikasi
                 SubdomainMiddleware::class,
@@ -83,8 +83,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->userMenuItems([
                 'logout' => MenuItem::make()
-                                    ->label('Keluar')
-                                    ->postAction('/admin-logout-redirect'),
+                    ->label('Keluar')
+                    ->postAction('/admin-logout-redirect'),
             ])
             ->brandName('Desa Digital')
             ->navigationGroups([
@@ -96,12 +96,12 @@ class AdminPanelProvider extends PanelProvider
                 'Administrasi Sistem',
             ])
 
-            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'company')
+            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'users')
             ->tenantDomain('{tenant:subdomain}.desa.local')
 
             ->renderHook(
                 'panels::head.end',
-                fn () => '
+                fn() => '
                 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
                 <script>
                     window.chart = function(config) {

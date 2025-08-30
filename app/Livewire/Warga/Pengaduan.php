@@ -71,7 +71,7 @@ class Pengaduan extends Component
 
         try {
             $data = [
-                'id_desa' => $desa->id,
+                'desa_id' => $desa->id,
                 'penduduk_id' => $penduduk->id,
                 'judul' => $this->judul,
                 'kategori' => $this->kategori,

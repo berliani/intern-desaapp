@@ -34,6 +34,7 @@ class InventarisResource extends Resource
     protected static ?string $navigationLabel = 'Inventaris';
 
     protected static ?string $recordTitleAttribute = 'nama_barang';
+    protected static ?string $tenantOwnershipRelationshipName = 'company';
 
     protected static ?int $navigationSort = 5;
 
@@ -44,8 +45,18 @@ class InventarisResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+
+        if ($tenant = Filament::getTenant()) {
+            return Inventaris::where('company_id', $tenant->id)->count();
+        }
+
+        return 0;
     }
+
+    //     public static function getTenantRelationshipName(): string
+    // {
+    //     return 'inventaris';
+    // }
 
     public static function form(Form $form): Form
     {
@@ -61,39 +72,39 @@ class InventarisResource extends Resource
                                     ->disabled()
                                     ->dehydrated(false),
                             ]),
-                            Grid::make(2)
-                                ->schema([
-                                    Forms\Components\TextInput::make('nama_barang')
-                                        ->label('Nama Barang')
-                                        ->required()
-                                        ->maxLength(100)
-                                        ->placeholder('Masukkan nama barang'),
-                                    Forms\Components\Select::make('status')
-                                        ->label('Status Barang')
-                                        ->options(Inventaris::getStatusOptions())
-                                        ->default('Tersedia')
-                                        ->required()
-                                        ->placeholder('Pilih status'),
-                                ]),
-                            Grid::make(3)
-                                ->schema([
-                                    Forms\Components\Select::make('kategori')
-                                        ->options(Inventaris::getKategoriOptions())
-                                        ->required()
-                                        ->placeholder('Pilih kategori'),
-                                    Forms\Components\TextInput::make('jumlah')
-                                        ->label('Jumlah Barang')
-                                        ->required()
-                                        ->numeric()
-                                        ->minValue(1)
-                                        ->default(1)
-                                        ->placeholder('Jumlah barang'),
-                                    Forms\Components\Select::make('kondisi')
-                                        ->options(Inventaris::getKondisiOptions())
-                                        ->required()
-                                        ->placeholder('Pilih kondisi'),
-                                ]),
-                        ]),
+                        Grid::make(2)
+                            ->schema([
+                                Forms\Components\TextInput::make('nama_barang')
+                                    ->label('Nama Barang')
+                                    ->required()
+                                    ->maxLength(100)
+                                    ->placeholder('Masukkan nama barang'),
+                                Forms\Components\Select::make('status')
+                                    ->label('Status Barang')
+                                    ->options(Inventaris::getStatusOptions())
+                                    ->default('Tersedia')
+                                    ->required()
+                                    ->placeholder('Pilih status'),
+                            ]),
+                        Grid::make(3)
+                            ->schema([
+                                Forms\Components\Select::make('kategori')
+                                    ->options(Inventaris::getKategoriOptions())
+                                    ->required()
+                                    ->placeholder('Pilih kategori'),
+                                Forms\Components\TextInput::make('jumlah')
+                                    ->label('Jumlah Barang')
+                                    ->required()
+                                    ->numeric()
+                                    ->minValue(1)
+                                    ->default(1)
+                                    ->placeholder('Jumlah barang'),
+                                Forms\Components\Select::make('kondisi')
+                                    ->options(Inventaris::getKondisiOptions())
+                                    ->required()
+                                    ->placeholder('Pilih kondisi'),
+                            ]),
+                    ]),
 
                 Section::make('Informasi Pengadaan')
                     ->schema([
@@ -119,7 +130,7 @@ class InventarisResource extends Resource
                                         return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                     }
                                     JS))
-                                    ->dehydrateStateUsing(fn ($state) => preg_replace('/\D/', '', $state))
+                                    ->dehydrateStateUsing(fn($state) => preg_replace('/\D/', '', $state))
                                     ->formatStateUsing(function ($state) {
                                         if (is_numeric($state)) {
                                             return number_format($state, 0, ',', '.');
@@ -160,7 +171,7 @@ class InventarisResource extends Resource
                             ->placeholder('Unggah foto barang')
                             ->columnSpanFull(),
                         Forms\Components\Hidden::make('created_by')
-                            ->default(fn () => auth()->id()),
+                            ->default(fn() => auth()->id()),
                     ]),
             ]);
     }
@@ -189,7 +200,7 @@ class InventarisResource extends Resource
                     ]),
                 Tables\Columns\TextColumn::make('nominal_harga')
                     ->label('Nominal Harga')
-                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format($state, 0, ',', '.'))
+                    ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
                     ->sortable()
                     ->alignRight(),
                 Tables\Columns\TextColumn::make('status')
@@ -305,7 +316,7 @@ class InventarisResource extends Resource
                                 ])
                                 ->default('semua')
                                 ->live()
-                                ->afterStateUpdated(function($state, callable $set) {
+                                ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state !== 'kustom') {
                                         $set('dari_tanggal', null);
                                         $set('sampai_tanggal', null);
@@ -316,11 +327,11 @@ class InventarisResource extends Resource
                                 ->schema([
                                     Forms\Components\DatePicker::make('dari_tanggal')
                                         ->label('Dari Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
 
                                     Forms\Components\DatePicker::make('sampai_tanggal')
                                         ->label('Sampai Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
                                 ]),
 
                             Forms\Components\Radio::make('format')
@@ -340,28 +351,22 @@ class InventarisResource extends Resource
                             if ($data['periode'] === 'hari_ini') {
                                 $dariTanggal = Carbon::today()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'minggu_ini') {
+                            } elseif ($data['periode'] === 'minggu_ini') {
                                 $dariTanggal = Carbon::today()->startOfWeek()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfWeek()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_ini') {
+                            } elseif ($data['periode'] === 'bulan_ini') {
                                 $dariTanggal = Carbon::today()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_ini') {
+                            } elseif ($data['periode'] === 'tahun_ini') {
                                 $dariTanggal = Carbon::today()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_lalu') {
+                            } elseif ($data['periode'] === 'bulan_lalu') {
                                 $dariTanggal = Carbon::today()->subMonth()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subMonth()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_lalu') {
+                            } elseif ($data['periode'] === 'tahun_lalu') {
                                 $dariTanggal = Carbon::today()->subYear()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subYear()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'kustom') {
+                            } elseif ($data['periode'] === 'kustom') {
                                 $dariTanggal = isset($data['dari_tanggal']) ? $data['dari_tanggal']->format('Y-m-d') : null;
                                 $sampaiTanggal = isset($data['sampai_tanggal']) ? $data['sampai_tanggal']->format('Y-m-d') : null;
                             }
@@ -405,7 +410,7 @@ class InventarisResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('company_id', Filament::getTenant()->id);
+        return Inventaris::query()->where('company_id', Filament::getTenant()->id);
     }
 
     public static function getWidgets(): array

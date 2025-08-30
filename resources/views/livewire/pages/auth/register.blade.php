@@ -4,7 +4,7 @@ use App\Models\User;
 use App\Models\Penduduk;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB; // <-- Pastikan ini di-import
+use Illuminate\Support\Facades\DB; 
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;

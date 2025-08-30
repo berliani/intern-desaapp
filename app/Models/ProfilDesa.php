@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\IMS\EnkripsiIMS;
 
 class ProfilDesa extends Model
 {
@@ -25,8 +26,6 @@ class ProfilDesa extends Model
         'thumbnails',
         'logo',
         'alamat',
-        'telepon',
-        'email',
         'website',
         'visi',
         'misi',
@@ -34,22 +33,112 @@ class ProfilDesa extends Model
         'company_id',
         'created_by',
         // luas_wilayah dihapus
+
+        // Atribut virtual untuk form (telepon & email akan dienkripsi oleh mutator)
+        'telepon',
+        'email',
+
+        // Kolom-kolom baru yang dienkripsi dan di-hash
+        'email_encrypted',
+        'email_search_hash',
+        'telepon_encrypted',
+        'telepon_search_hash',
+        'alamat_encrypted',
+        'alamat_search_hash',
     ];
 
     // Cast thumbnails sebagai array
     protected $casts = [
         'thumbnails' => 'array',
+        'sejarah' => 'string',
     ];
 
-    // Accessor untuk mendapatkan thumbnail pertama (jika diperlukan untuk kompatibilitas)
-    public function getThumbnailAttribute()
-    {
-        if (isset($this->thumbnails) && is_array($this->thumbnails) && count($this->thumbnails) > 0) {
-            return $this->thumbnails[0];
-        }
+            // --- BLOK KODE ENKRIPSI ---
+    private static ?EnkripsiIMS $encryptorInstance = null;
+    private static ?string $pepperKey = null;
 
-        return null;
+    private static function getEncryptor(): EnkripsiIMS
+    {
+        if (self::$encryptorInstance === null) {
+            $encryptionKey = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$encryptionKey) {
+                throw new \Exception("Kunci enkripsi IMS_ENCRYPTION_KEY tidak valid.");
+            }
+            self::$encryptorInstance = new EnkripsiIMS($encryptionKey);
+        }
+        return self::$encryptorInstance;
     }
+
+    private static function getPepperKey(): string
+    {
+        if (self::$pepperKey === null) {
+            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+            if (!$pepperKey) {
+                throw new \Exception("Pepper key IMS_PEPPER_KEY tidak valid.");
+            }
+            self::$pepperKey = $pepperKey;
+        }
+        return self::$pepperKey;
+    }
+
+    // Telepon Accessor & Mutator
+    public function setTeleponAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['telepon_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['telepon_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+
+    public function getTeleponAttribute()
+    {
+        $encrypted = $this->attributes['telepon_encrypted'] ?? null;
+        if (!$encrypted) return null;
+        try {
+            return self::getEncryptor()->decrypt($encrypted);
+        } catch (\Exception $e) {
+            return 'Gagal Dekripsi';
+        }
+    }
+
+    // Email Accessor & Mutator
+    public function setEmailAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['email_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+
+    public function getEmailAttribute()
+    {
+        $encrypted = $this->attributes['email_encrypted'] ?? null;
+        if (!$encrypted) return null;
+        try {
+            return self::getEncryptor()->decrypt($encrypted);
+        } catch (\Exception $e) {
+            return 'Gagal Dekripsi';
+        }
+    }
+    public function setAlamatAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['alamat_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['alamat_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+
+    public function getAlamatAttribute()
+    {
+        $encrypted = $this->attributes['alamat_encrypted'] ?? null;
+        if (!$encrypted) return null;
+        try {
+            return self::getEncryptor()->decrypt($encrypted);
+        } catch (\Exception $e) {
+            return 'Gagal Dekripsi';
+        }
+    }
+    // --- AKHIR ENKRIPSI ---
 
     // Relasi-relasi
     public function creator(): BelongsTo
@@ -59,37 +148,37 @@ class ProfilDesa extends Model
 
     public function penduduk(): HasMany
     {
-        return $this->hasMany(Penduduk::class, 'id_desa');
+        return $this->hasMany(Penduduk::class, 'desa_id');
     }
 
     public function layanan(): HasMany
     {
-        return $this->hasMany(LayananDesa::class, 'id_desa');
+        return $this->hasMany(LayananDesa::class, 'desa_id');
     }
 
     public function berita(): HasMany
     {
-        return $this->hasMany(Berita::class, 'id_desa');
+        return $this->hasMany(Berita::class, 'desa_id');
     }
 
     public function keuangan(): HasMany
     {
-        return $this->hasMany(KeuanganDesa::class, 'id_desa');
+        return $this->hasMany(KeuanganDesa::class, 'desa_id');
     }
 
     public function inventaris(): HasMany
     {
-        return $this->hasMany(Inventaris::class, 'id_desa');
+        return $this->hasMany(Inventaris::class, 'desa_id');
     }
 
     public function pengaduan(): HasMany
     {
-        return $this->hasMany(Pengaduan::class, 'id_desa');
+        return $this->hasMany(Pengaduan::class, 'desa_id');
     }
 
     public function umkm(): HasMany
     {
-        return $this->hasMany(Umkm::class, 'id_desa');
+        return $this->hasMany(Umkm::class, 'desa_id');
     }
 
     public function batasWilayahPotensi(): HasOne

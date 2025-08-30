@@ -1,5 +1,5 @@
 @php
-    // Cek apakah host saat ini bukan domain utama
+
     $host = request()->getHost();
     $mainDomain = config('app.domain', 'desa.local');
     $isSubdomain = $host !== $mainDomain && Str::endsWith($host, '.' . $mainDomain);
@@ -61,10 +61,10 @@
                 <div class="flex items-center space-x-6 mr-8">
                 </div>
 
-                {{-- LOGIKA TOMBOL BARU --}}
+
                 <div class="flex items-center border-l border-gray-200 pl-6 ml-6 space-x-4">
                     @if ($isSubdomain)
-                        {{-- TAMPILAN UNTUK SUBDOMAIN --}}
+
                         @auth
                             <!-- User Dropdown Desktop -->
                             <div class="relative" x-data="{ open: false }">
@@ -115,9 +115,9 @@
                             class="text-sm font-medium px-5 py-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors duration-200">
                             Masuk
                         </a>
-                        <a href="{{ route('register') }}"
+                        {{-- <a href="{{ route('register') }}"
                             class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
-                            Daftar Warga
+                            Daftar Warga --}}
                         </a>
                         <a href="{{ route('register-desa') }}"
                             class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
@@ -157,7 +157,7 @@
                     {{-- TAMPILAN TOMBOL MOBILE UNTUK SITUS UTAMA (GLOBAL) --}}
                     <div class="grid grid-cols-1 gap-3 px-3 mt-3">
                         <a href="{{ route('login') }}" class="...">Masuk</a>
-                        <a href="{{ route('register') }}" class="...">Daftar Warga</a>
+                        {{-- <a href="{{ route('register') }}" class="...">Daftar Warga</a> --}}
                         <a href="{{ route('register-desa') }}" class="...">Daftarkan Desa</a>
                     </div>
                 @endif
