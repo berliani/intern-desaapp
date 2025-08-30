@@ -1,5 +1,5 @@
 @php
-    // Cek apakah host saat ini bukan domain utama
+
     $host = request()->getHost();
     $mainDomain = config('app.domain', 'desa.local');
     $isSubdomain = $host !== $mainDomain && Str::endsWith($host, '.' . $mainDomain);
@@ -59,42 +59,69 @@
                 <div class="flex items-center space-x-6 mr-8">
                 </div>
 
-                {{-- LOGIC CHECK FOR BUTTONS --}}
-                @if(request()->attributes->has('company'))
-                {{-- TAMPILAN TOMBOL UNTUK SUBDOMAIN --}}
-                @auth
-                <div class="relative border-l border-gray-200 pl-6" x-data="{ open: false }">
-                    <button @click="open = !open" @click.away="open = false" class="flex items-center text-sm font-medium text-gray-700 hover:text-emerald-600 focus:outline-none transition duration-150 ease-in-out bg-gray-100 hover:bg-gray-200 rounded-full pl-3 pr-2 py-1.5">
-                        <span class="mr-1">{{ Auth::user()->name }}</span>
-                        <img class="h-8 w-8 rounded-full object-cover border-2 border-white shadow-sm" src="{{ Auth::user()->profile_photo_path ? Storage::url(Auth::user()->profile_photo_path) : 'https://ui-avatars.com/api/?name='.urlencode(Auth::user()->name).'&color=10B981&background=D1FAE5' }}" alt="{{ Auth::user()->name }}">
-                    </button>
-                    <div x-show="open" x-transition class="absolute right-0 mt-2 w-56 rounded-xl shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50 border border-gray-100" x-cloak>
-                        {{-- Dropdown content --}}
-                    </div>
-                </div>
-                @else
+
                 <div class="flex items-center border-l border-gray-200 pl-6 ml-6 space-x-4">
-                    <a href="{{ route('login') }}" class="text-sm font-medium px-5 py-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors duration-200">
-                        Masuk
-                    </a>
-                    {{-- FIX: Tombol Daftar Warga ditambahkan di sini --}}
-                    <a href="{{ route('register') }}" class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
-                        Daftar Warga
-                    </a>
-                </div>
-                @endauth
-                @else
-                {{-- TAMPILAN TOMBOL UNTUK SITUS UTAMA (GLOBAL) --}}
-                <div class="flex items-center border-l border-gray-200 pl-6 ml-6 space-x-4">
-                    <a href="{{ route('login') }}" class="text-sm font-medium px-5 py-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors duration-200">
-                        Masuk
-                    </a>
-                    <!-- <a href="{{ route('register') }}" class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
-                            Daftar Warga
-                        </a> -->
-                    <a href="{{ route('register-desa') }}" class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
-                        Daftarkan Desa
-                    </a>
+                    @if ($isSubdomain)
+
+                        @auth
+                            <!-- User Dropdown Desktop -->
+                            <div class="relative" x-data="{ open: false }">
+                                <button @click="open = !open" @click.away="open = false"
+                                    class="flex items-center text-sm font-medium text-gray-700 hover:text-emerald-600 focus:outline-none transition duration-150 ease-in-out bg-gray-100 hover:bg-gray-200 rounded-full pl-3 pr-2 py-1.5">
+                                    <span class="mr-1">{{ Auth::user()->name }}</span>
+                                    <img class="h-8 w-8 rounded-full object-cover border-2 border-white shadow-sm"
+                                        src="{{ Auth::user()->profile_photo_path ? Storage::url(Auth::user()->profile_photo_path) : 'https://ui-avatars.com/api/?name=' . urlencode(Auth::user()->name) . '&color=10B981&background=D1FAE5' }}"
+                                        alt="{{ Auth::user()->name }}">
+                                </button>
+                                <div x-show="open" x-transition
+                                    class="absolute right-0 mt-2 w-56 rounded-xl shadow-lg py-1 bg-white ring-1 ring-black ring-opacity-5 z-50 border border-gray-100"
+                                    x-cloak>
+                                    <a href="{{ route('dashboard') }}"
+                                        class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-emerald-500"
+                                            fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                        </svg> Dashboard
+                                    </a>
+                                    <form method="POST" action="{{ route('logout') }}">
+                                        @csrf
+                                        <button type="submit"
+                                            class="w-full text-left flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-emerald-600">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-emerald-500"
+                                                fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                            </svg> Keluar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        @else
+                            <a href="{{ route('login') }}"
+                                class="text-sm font-medium px-5 py-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors duration-200">
+                                Masuk
+                            </a>
+                            <a href="{{ route('register') }}"
+                                class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
+                                Daftar Warga
+                            </a>
+                        @endauth
+                    @else
+                        {{-- TAMPILAN UNTUK SITUS UTAMA (GLOBAL) --}}
+                        <a href="{{ route('login') }}"
+                            class="text-sm font-medium px-5 py-2 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 border border-emerald-200 rounded-lg transition-colors duration-200">
+                            Masuk
+                        </a>
+                        {{-- <a href="{{ route('register') }}"
+                            class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
+                            Daftar Warga --}}
+                        </a>
+                        <a href="{{ route('register-desa') }}"
+                            class="text-sm font-medium px-5 py-2 text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm hover:shadow transition-all duration-200">
+                            Daftarkan Desa
+                        </a>
+                    @endif
                 </div>
                 @endif
             </div>

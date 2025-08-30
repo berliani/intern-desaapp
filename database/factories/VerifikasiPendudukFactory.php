@@ -36,7 +36,7 @@ class VerifikasiPendudukFactory extends Factory
 
         return [
             'user_id' => User::factory(),
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'nik' => $this->faker->numerify('################'),
             'kk' => $this->faker->numerify('################'),
             'nama' => $fullName,

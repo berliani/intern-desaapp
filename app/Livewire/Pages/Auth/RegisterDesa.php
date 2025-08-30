@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +21,8 @@ use Twilio\Rest\Client as TwilioClient;
 #[Layout('layouts.guest')]
 class RegisterDesa extends Component
 {
+    public string $name = '';
+    public string $username = '';
     public string $name = '';
     public string $username = '';
     public string $email = '';
@@ -56,7 +59,8 @@ class RegisterDesa extends Component
 
         if ($this->verificationMethod === 'email') {
             $validated = $this->validate(['email' => ['required', 'email', 'max:255']]);
-            
+
+            // Cek keunikan secara manual menggunakan hash
             $emailSearchHash = hash('sha256', strtolower($validated['email']));
             if (User::where('email_search_hash', $emailSearchHash)->exists()) {
                 $this->addError('email', 'Alamat email ini sudah terdaftar.');
@@ -67,6 +71,8 @@ class RegisterDesa extends Component
         } else {
             $validated = $this->validate(['telepon' => ['required', 'string', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
             $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
+
+            // Cek keunikan secara manual menggunakan hash
             $teleponSearchHash = hash('sha256', $normalizedPhone);
             if (User::where('telepon_search_hash', $teleponSearchHash)->exists()) {
                 $this->addError('telepon', 'Nomor telepon ini sudah terdaftar.');
@@ -105,6 +111,8 @@ class RegisterDesa extends Component
             'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
             'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255'],
             'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string'],
+            'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255'],
+            'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string'],
             'password' => [
                 'required',
                 'string',
@@ -132,7 +140,7 @@ class RegisterDesa extends Component
                 'password' => Hash::make($validated['password']),
                 'company_id' => $company->id,
             ];
-            
+
             if (!empty($validated['email'])) {
                 $userData['email_encrypted'] = $encryptor->encrypt($validated['email']);
                 $userData['email_search_hash'] = hash('sha256', strtolower($validated['email']));
@@ -149,7 +157,7 @@ class RegisterDesa extends Component
             $adminUser->assignRole('admin');
             event(new Registered($adminUser));
             Auth::login($adminUser);
-        });
+
 
         return $this->redirect(route('desa.profil.create'));
     }

@@ -66,8 +66,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                SubdomainMiddleware::class,
-                RoleMiddleware::class.':super_admin|admin',
+                RoleMiddleware::class . ':super_admin|admin',
 
                 // Middleware subdomain diletakkan di sini, setelah otentikasi
                 SubdomainMiddleware::class,
@@ -94,12 +93,37 @@ class AdminPanelProvider extends PanelProvider
                 'Administrasi Sistem',
             ])
 
-            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'company')
+            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'users')
             ->tenantDomain('{tenant:subdomain}.desa.local')
             ->tenantDomain('{tenant:subdomain}.desa.local')
 
             ->renderHook(
                 'panels::head.end',
+                fn() => '
+                <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+                <script>
+                    window.chart = function(config) {
+                        return {
+                            chart: null,
+                            init() {
+                                setTimeout(() => {
+                                    const canvas = this.$refs.canvas;
+                                    if (canvas) {
+                                        try {
+                                            this.chart = new Chart(canvas.getContext("2d"), {
+                                                type: config.type,
+                                                data: config.cachedData,
+                                                options: config.options
+                                            });
+                                        } catch(e) {
+                                            console.error("Error initializing chart:", e);
+                                        }
+                                    }
+                                }, 100);
+                            }
+                        };
+                    };
+                </script>'
                 fn() => '
                   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
                   <script>

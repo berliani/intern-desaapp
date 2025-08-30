@@ -55,7 +55,7 @@ class PendudukFactory extends Factory
         $golonganDarah = $this->faker->randomElement(['A', 'B', 'AB', 'O', '-']);
 
         return [
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'nik' => $this->generateNIK(),
             'kk' => $this->generateKK(),
             'kepala_keluarga_id' => null, // Will be set later
@@ -157,7 +157,7 @@ class PendudukFactory extends Factory
     {
         return $this->state(function (array $attributes) use ($kepalaKeluarga) {
             return [
-                'id_desa' => $kepalaKeluarga->id_desa,
+                'desa_id' => $kepalaKeluarga->desa_id,
                 'kk' => $kepalaKeluarga->kk,
                 'kepala_keluarga_id' => $kepalaKeluarga->id,
                 'kepala_keluarga' => false,

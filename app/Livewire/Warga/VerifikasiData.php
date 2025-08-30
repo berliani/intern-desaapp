@@ -44,7 +44,7 @@ class VerifikasiData extends Component
         $this->verifikasiPending = VerifikasiPenduduk::where('user_id', $user->id)
             ->whereIn('status', ['pending', 'approved'])
             ->first();
-            
+
         if ($this->verifikasiPending && $this->verifikasiPending->status === 'approved') {
             return redirect()->route('warga.dashboard');
         }
@@ -53,7 +53,7 @@ class VerifikasiData extends Component
             $this->nama = $user->name;
             $this->nik = $user->nik;
             $this->email = $user->email;
-            $this->no_hp = $user->telepon; 
+            $this->no_hp = $user->telepon;
         }
     }
 
@@ -91,11 +91,11 @@ class VerifikasiData extends Component
 
         return $rules;
     }
-    
+
     public function submit()
     {
         $validatedData = $this->validate();
- 
+
         $user = Auth::user();
 
         if (!$this->hasRegisteredWithEmail && !empty($validatedData['email'])) {
@@ -120,7 +120,7 @@ class VerifikasiData extends Component
             $this->addError('nik', 'NIK ini sudah pernah diajukan untuk verifikasi.');
             return;
         }
-        
+
         $profilDesa = ProfilDesa::where('company_id', $user->company_id)->first();
         if (!$profilDesa) {
             session()->flash('error', 'Profil desa tidak ditemukan. Harap hubungi admin.');
@@ -128,9 +128,9 @@ class VerifikasiData extends Component
         }
 
         $verification = new VerifikasiPenduduk();
-        
+
         $verification->fill($validatedData);
-        
+
         $verification->user_id = $user->id;
         $verification->desa_id = $profilDesa->id;
         $verification->company_id = $user->company_id;

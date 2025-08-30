@@ -11,13 +11,20 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 use Filament\Models\Contracts\HasTenants;
+use Filament\Models\Contracts\HasTenants;
 use Illuminate\Support\Collection;
 use Filament\Panel;
 use App\IMS\EnkripsiIMS;
+use Filament\Panel;
 
+class User extends Authenticatable implements HasTenants
 class User extends Authenticatable implements HasTenants
 {
     use HasApiTokens, HasFactory, Notifiable, HasRoles;
+
+    /**
+     * The attributes that are mass assignable.
+     */
 
     protected $fillable = [
         'name',
@@ -25,7 +32,10 @@ class User extends Authenticatable implements HasTenants
         'company_id',
         'penduduk_id',
         'password',
+        'password',
         'profile_photo_path',
+
+        // Kolom-kolom baru yang dienkripsi dan di-hash
         'email_encrypted',
         'email_search_hash',
         'telepon_encrypted',
@@ -35,6 +45,11 @@ class User extends Authenticatable implements HasTenants
         'nik_prefix_hash',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
@@ -57,7 +72,7 @@ class User extends Authenticatable implements HasTenants
     {
         return $this->hasOne(VerifikasiPenduduk::class, 'user_id');
     }
-    
+
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
@@ -145,7 +160,7 @@ class User extends Authenticatable implements HasTenants
             if ($user->penduduk) {
                 $user->penduduk->delete();
             }
-            
+
             if ($user->verifikasiPenduduk) {
                 $user->verifikasiPenduduk->delete();
             }

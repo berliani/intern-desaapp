@@ -117,7 +117,7 @@ class InventarisFactory extends Factory
         ]);
 
         return [
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'created_by' => User::factory(),
             'nama_barang' => $nama,
             'kategori' => $kategori,

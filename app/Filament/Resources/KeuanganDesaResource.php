@@ -32,6 +32,8 @@ class KeuanganDesaResource extends Resource
     protected static ?string $pluralModelLabel = 'Keuangan Desa';
     protected static ?int $navigationSort = 4;
 
+    protected static ?string $tenantOwnershipRelationshipName = 'company';
+
     public static function getNavigationLabel(): string
     {
         return 'Keuangan Desa';
@@ -40,7 +42,11 @@ class KeuanganDesaResource extends Resource
     public static function getNavigationBadge(): ?string
     {
 
-        return static::getModel()::count();
+        if ($tenant = Filament::getTenant()) {
+            return KeuanganDesa::where('company_id', $tenant->id)->count();
+        }
+
+        return 0;
     }
 
     public static function form(Form $form): Form
@@ -51,7 +57,7 @@ class KeuanganDesaResource extends Resource
                     ->schema([
                         Grid::make(2)
                             ->schema([
-                                // Forms\Components\Select::make('id_desa') // <-- DIHAPUS, tidak perlu lagi memilih desa
+
                                 Forms\Components\Select::make('jenis')
                                     ->options([
                                         'Pemasukan' => 'Pemasukan',
@@ -75,7 +81,7 @@ class KeuanganDesaResource extends Resource
                                         return numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
                                     }
                                     JS))
-                                    ->dehydrateStateUsing(fn ($state) => preg_replace('/\D/', '', $state))
+                                    ->dehydrateStateUsing(fn($state) => preg_replace('/\D/', '', $state))
                                     ->formatStateUsing(function ($state) {
                                         if (is_numeric($state)) {
                                             return number_format($state, 0, ',', '.');
@@ -99,7 +105,7 @@ class KeuanganDesaResource extends Resource
                                     ->required(),
                             ]),
                         Forms\Components\Hidden::make('created_by')
-                            ->default(fn () => auth()->id()),
+                            ->default(fn() => auth()->id()),
                     ]),
             ]);
     }
@@ -119,11 +125,11 @@ class KeuanganDesaResource extends Resource
                     ->searchable()
                     ->limit(30),
                 Tables\Columns\TextColumn::make('jumlah')
-                    ->formatStateUsing(fn ($state) => 'Rp ' . number_format($state, 0, ',', '.'))
+                    ->formatStateUsing(fn($state) => 'Rp ' . number_format($state, 0, ',', '.'))
                     ->sortable()
                     ->alignRight()
                     ->weight('bold')
-                    ->color(fn ($record) => $record->jenis === 'Pemasukan' ? 'success' : 'danger'),
+                    ->color(fn($record) => $record->jenis === 'Pemasukan' ? 'success' : 'danger'),
                 Tables\Columns\TextColumn::make('tanggal')
                     ->date('d/m/Y')
                     ->sortable(),
@@ -190,20 +196,20 @@ class KeuanganDesaResource extends Resource
                             }),
                         Forms\Components\DatePicker::make('dari_tanggal')
                             ->label('Dari Tanggal')
-                            ->visible(fn ($get) => $get('preset_periode') === 'custom'),
+                            ->visible(fn($get) => $get('preset_periode') === 'custom'),
                         Forms\Components\DatePicker::make('sampai_tanggal')
                             ->label('Sampai Tanggal')
-                            ->visible(fn ($get) => $get('preset_periode') === 'custom'),
+                            ->visible(fn($get) => $get('preset_periode') === 'custom'),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
                                 $data['dari_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal', '>=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tanggal', '>=', $date),
                             )
                             ->when(
                                 $data['sampai_tanggal'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('tanggal', '<=', $date),
+                                fn(Builder $query, $date): Builder => $query->whereDate('tanggal', '<=', $date),
                             );
                     })
                     ->indicateUsing(function (array $data): array {
@@ -246,7 +252,7 @@ class KeuanganDesaResource extends Resource
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
 
-                // Tambahkan action untuk restore individual
+
                 Tables\Actions\RestoreAction::make()
                     ->label('Pulihkan')
                     ->icon('heroicon-o-arrow-path')
@@ -254,7 +260,7 @@ class KeuanganDesaResource extends Resource
                     ->tooltip('Mengembalikan data yang telah dihapus')
                     ->successNotificationTitle('Data berhasil dipulihkan'),
 
-                // Tambahkan action untuk force delete individual
+
                 Tables\Actions\ForceDeleteAction::make()
                     ->label('Hapus Permanen')
                     ->icon('heroicon-o-trash')
@@ -288,14 +294,14 @@ class KeuanganDesaResource extends Resource
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
 
-                    // Action ini sudah ada, tapi mari tingkatkan labelnya
+
                     Tables\Actions\ForceDeleteBulkAction::make()
                         ->label('Hapus Permanen Massal')
                         ->icon('heroicon-o-trash')
                         ->color('danger')
                         ->successNotificationTitle('Data terpilih berhasil dihapus permanen'),
 
-                    // Action ini juga sudah ada, tapi mari tingkatkan labelnya
+
                     Tables\Actions\RestoreBulkAction::make()
                         ->label('Pulihkan Massal')
                         ->icon('heroicon-o-arrow-path')
@@ -321,7 +327,7 @@ class KeuanganDesaResource extends Resource
                                 ])
                                 ->default('semua')
                                 ->live()
-                                ->afterStateUpdated(function($state, callable $set) {
+                                ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state !== 'kustom') {
                                         $set('dari_tanggal', null);
                                         $set('sampai_tanggal', null);
@@ -332,11 +338,11 @@ class KeuanganDesaResource extends Resource
                                 ->schema([
                                     Forms\Components\DatePicker::make('dari_tanggal')
                                         ->label('Dari Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
 
                                     Forms\Components\DatePicker::make('sampai_tanggal')
                                         ->label('Sampai Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
                                 ]),
 
                             // Format eksport di bawah periode
@@ -359,28 +365,22 @@ class KeuanganDesaResource extends Resource
                             if ($data['periode'] === 'hari_ini') {
                                 $dariTanggal = Carbon::today()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'minggu_ini') {
+                            } elseif ($data['periode'] === 'minggu_ini') {
                                 $dariTanggal = Carbon::today()->startOfWeek()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfWeek()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_ini') {
+                            } elseif ($data['periode'] === 'bulan_ini') {
                                 $dariTanggal = Carbon::today()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_ini') {
+                            } elseif ($data['periode'] === 'tahun_ini') {
                                 $dariTanggal = Carbon::today()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_lalu') {
+                            } elseif ($data['periode'] === 'bulan_lalu') {
                                 $dariTanggal = Carbon::today()->subMonth()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subMonth()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_lalu') {
+                            } elseif ($data['periode'] === 'tahun_lalu') {
                                 $dariTanggal = Carbon::today()->subYear()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subYear()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'kustom') {
+                            } elseif ($data['periode'] === 'kustom') {
                                 $dariTanggal = isset($data['dari_tanggal']) ? $data['dari_tanggal']->format('Y-m-d') : null;
                                 $sampaiTanggal = isset($data['sampai_tanggal']) ? $data['sampai_tanggal']->format('Y-m-d') : null;
                             }
@@ -405,9 +405,10 @@ class KeuanganDesaResource extends Resource
                 ]),
             ])
             ->defaultSort('tanggal', 'desc')
-            ->emptyStateDescription(function() {
-                $totalPemasukan = KeuanganDesa::where('jenis', 'Pemasukan')->sum('jumlah');
-                $totalPengeluaran = KeuanganDesa::where('jenis', 'Pengeluaran')->sum('jumlah');
+            ->emptyStateDescription(function () {
+                $tenantId = Filament::getTenant()->id;
+                $totalPemasukan = KeuanganDesa::where('company_id', $tenantId)->where('jenis', 'Pemasukan')->sum('jumlah');
+                $totalPengeluaran = KeuanganDesa::where('company_id', $tenantId)->where('jenis', 'Pengeluaran')->sum('jumlah');
                 $saldo = $totalPemasukan - $totalPengeluaran;
 
                 $formattedPemasukan = 'Rp ' . number_format($totalPemasukan, 0, ',', '.');
@@ -431,12 +432,12 @@ class KeuanganDesaResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('company_id', Filament::getTenant()->id);
+        return KeuanganDesa::query()->where('company_id', Filament::getTenant()->id);
     }
     public static function getWidgets(): array
     {
         return [
-            InventarisResource\Widgets\InventarisStats::class,
+            KeuanganDesaResource\Widgets\KeuanganStats::class,
         ];
     }
 }

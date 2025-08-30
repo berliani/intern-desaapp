@@ -14,7 +14,7 @@ class Login extends Component
 
     public function mount()
     {
-        
+
     }
 
     public function login()

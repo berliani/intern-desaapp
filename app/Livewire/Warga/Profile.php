@@ -220,7 +220,7 @@ class Profile extends Component
         VerifikasiPenduduk::create([
             'user_id' => $this->user->id,
             'penduduk_id' => $this->penduduk->id,
-            'id_desa' => $this->penduduk->id_desa,
+            'desa_id' => $this->penduduk->desa_id,
             'nik' => $this->penduduk->nik,
             'kk' => $this->penduduk->kk,
             'kepala_keluarga_id' => $this->penduduk->kepala_keluarga_id,

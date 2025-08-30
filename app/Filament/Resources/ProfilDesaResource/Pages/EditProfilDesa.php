@@ -1,2 +1,37 @@
 <?php
-return sg_load('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');
+
+namespace App\Filament\Resources\ProfilDesaResource\Pages;
+
+use App\Filament\Resources\ProfilDesaResource;
+use Filament\Actions;
+use Filament\Resources\Pages\EditRecord;
+
+class EditProfilDesa extends EditRecord
+{
+    protected static string $resource = ProfilDesaResource::class;
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('view', ['record' => $this->record]);
+    }
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\DeleteAction::make(),
+        ];
+    }
+
+    /**
+     * Fungsi mengambil data yang sudah didekripsi
+     * dari model dan memasukkannya ke dalam form secara otomatis.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        // Mengambil data 'telepon' yang sudah didekripsi melalui accessor di model
+        $data['telepon'] = $this->record->telepon;
+
+        // Mengambil data 'email' yang sudah didekripsi melalui accessor di model
+        $data['email'] = $this->record->email;
+
+        return $data;
+    }
+}

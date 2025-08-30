@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
@@ -235,7 +236,7 @@ new #[Layout('layouts.guest')] class extends Component
         $sid    = env('TWILIO_SID');
         $token  = env('TWILIO_AUTH_TOKEN');
         $from   = env('TWILIO_WHATSAPP_FROM');
-        
+
         if (!$sid || !$token || !$from) {
             $this->addError('telepon', 'Konfigurasi layanan WhatsApp tidak lengkap. Harap hubungi admin.');
             return;

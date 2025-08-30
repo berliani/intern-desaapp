@@ -99,7 +99,7 @@ class UmkmFactory extends Factory
         };
 
         return [
-            'id_desa' => ProfilDesa::inRandomOrder()->first()?->id ?? ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::inRandomOrder()->first()?->id ?? ProfilDesa::factory(),
             'penduduk_id' => Penduduk::inRandomOrder()->first()?->id ?? Penduduk::factory(),
             'nama_usaha' => $namaUsaha,
             'produk' => $produk,

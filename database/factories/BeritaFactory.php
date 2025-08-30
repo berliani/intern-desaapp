@@ -32,7 +32,7 @@ class BeritaFactory extends Factory
         ]);
 
         return [
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'created_by' => User::factory(),
             'judul' => $this->faker->sentence(6),
             'isi' => '<p>' . implode('</p><p>', $this->faker->paragraphs(5)) . '</p>',

@@ -15,10 +15,20 @@ class CreateKeuanganDesa extends CreateRecord
     {
         $data['created_by'] = auth()->id();
 
-        
-        $data['company_id'] = Filament::getTenant()->id;
+
+        $tenant = Filament::getTenant();
+
+
+        $data['company_id'] = $tenant->id;
+
+
+        if ($tenant->profilDesa) {
+            $data['desa_id'] = $tenant->profilDesa->id;
+        }
+
 
         if (isset($data['jumlah']) && is_string($data['jumlah'])) {
+
             $data['jumlah'] = (float) str_replace(['Rp', '.', ','], ['', '', '.'], $data['jumlah']);
         }
 
