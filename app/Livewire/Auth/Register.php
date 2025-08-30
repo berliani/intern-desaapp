@@ -1,5 +1,8 @@
 <?php
 
+namespace App\Livewire\Pages\Auth;
+
+use App\IMS\EnkripsiIMS;
 use App\Models\User;
 use App\Models\Penduduk;
 use App\Models\Company;
@@ -11,10 +14,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
-use Livewire\Volt\Component;
+use Livewire\Component;
 use Illuminate\Support\Str;
+use Twilio\Rest\Client as TwilioClient;
 
-new #[Layout('layouts.guest')] class extends Component
+#[Layout('layouts.guest')]
+class Register extends Component
 {
     public string $name = '';
     public string $username = '';
@@ -60,7 +65,11 @@ new #[Layout('layouts.guest')] class extends Component
         $this->resetErrorBag('nik');
 
         if (strlen($value) === 16) {
-            $companyId = session('registration_company_id'); 
+            $companyId = session('registration_company_id');
+            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$key) { throw new \Exception("Kunci enkripsi IMS tidak valid."); }
+            $encryptor = new EnkripsiIMS($key);
+
             $nikSearchHash = hash('sha256', $value);
             $penduduk = Penduduk::where('nik_search_hash', $nikSearchHash)
                 ->where('company_id', $companyId)
@@ -79,7 +88,6 @@ new #[Layout('layouts.guest')] class extends Component
 
     public function sendVerificationCode(): void
     {
-    
         $this->validate(['captcha' => ['required', 'string']]);
 
         if (strtolower($this->captcha) !== strtolower(session('captcha'))) {
@@ -161,65 +169,63 @@ new #[Layout('layouts.guest')] class extends Component
             return;
         }
 
-        $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
-        if (!$key) {
-            throw new \Exception("Kunci enkripsi IMS tidak valid atau tidak ada di .env");
-        }
-        $encryptor = new \App\IMS\EnkripsiIMS($key);
+        DB::transaction(function () use ($validated, $companyId) {
+            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$key) { throw new \Exception("Kunci enkripsi IMS tidak valid atau tidak ada di .env"); }
+            $encryptor = new EnkripsiIMS($key);
 
-        $nikSearchHash = hash('sha256', $validated['nik']);
-        $penduduk = Penduduk::where('nik_search_hash', $nikSearchHash)
-            ->where('company_id', $companyId) 
-            ->first();
+            $nikSearchHash = hash('sha256', $validated['nik']);
+            $penduduk = Penduduk::where('nik_search_hash', $nikSearchHash)
+                ->where('company_id', $companyId)
+                ->first();
 
-        $userData = [
-            'name' => $validated['name'],
-            'username' => $validated['username'],
-            'password' => Hash::make($validated['password']),
-            'penduduk_id' => $penduduk?->id,
-            'company_id' => $companyId, 
-            'nik_encrypted' => $encryptor->encrypt($validated['nik']),
-            'nik_search_hash' => $nikSearchHash,
-        ];
+            $userData = [
+                'name' => $validated['name'],
+                'username' => $validated['username'],
+                'password' => Hash::make($validated['password']),
+                'penduduk_id' => $penduduk?->id,
+                'company_id' => $companyId,
+                'nik_encrypted' => $encryptor->encrypt($validated['nik']),
+                'nik_search_hash' => $nikSearchHash,
+            ];
 
-        if (!empty($validated['email'])) {
-            $userData['email_encrypted'] = $encryptor->encrypt($validated['email']);
-            $userData['email_search_hash'] = hash('sha256', strtolower($validated['email']));
-        }
+            if (!empty($validated['email'])) {
+                $userData['email_encrypted'] = $encryptor->encrypt($validated['email']);
+                $userData['email_search_hash'] = hash('sha256', strtolower($validated['email']));
+            }
 
-        if (!empty($validated['telepon'])) {
-            $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
-            $userData['telepon_encrypted'] = $encryptor->encrypt($normalizedPhone);
-            $userData['telepon_search_hash'] = hash('sha256', $normalizedPhone);
-        }
+            if (!empty($validated['telepon'])) {
+                $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
+                $userData['telepon_encrypted'] = $encryptor->encrypt($normalizedPhone);
+                $userData['telepon_search_hash'] = hash('sha256', $normalizedPhone);
+            }
 
-        $user = User::create($userData);
+            $user = User::create($userData);
 
-        $redirectTo = '';
-        if ($penduduk) {
-            $user->assignRole('warga');
-            $penduduk->update(['user_id' => $user->id]);
-            session()->flash('status', 'Pendaftaran berhasil! Akun Anda sudah terverifikasi sebagai warga.');
-            $redirectTo = '/dashboard';
-        } else {
-            $user->assignRole('unverified');
-            session()->flash('status', 'Pendaftaran berhasil! NIK Anda belum terdaftar, silakan lakukan verifikasi data.');
-            $redirectTo = '/verifikasi-data';
-        }
+            $redirectTo = '';
+            if ($penduduk) {
+                $user->assignRole('warga');
+                $penduduk->update(['user_id' => $user->id]);
+                session()->flash('status', 'Pendaftaran berhasil! Akun Anda sudah terverifikasi sebagai warga.');
+                $redirectTo = '/dashboard';
+            } else {
+                $user->assignRole('unverified');
+                session()->flash('status', 'Pendaftaran berhasil! NIK Anda belum terdaftar, silakan lakukan verifikasi data.');
+                $redirectTo = '/verifikasi-data';
+            }
 
-        event(new Registered($user));
-        Auth::login($user);
+            event(new Registered($user));
+            Auth::login($user);
 
-        session()->forget('registration_company_id');
-
-        $this->redirect($redirectTo, navigate: true);
+            session()->forget('registration_company_id');
+            $this->redirect($redirectTo, navigate: true);
+        });
     }
 
     private function sendOtpByEmail(string $email)
     {
-        $companyId = session('registration_company_id'); 
+        $companyId = session('registration_company_id');
         $company = Company::find($companyId);
-
         $otpCode = random_int(100000, 999999);
         session(['otp' => $otpCode]);
         Mail::to($email)->send(new SendOtpMail($otpCode, $company));
@@ -229,6 +235,22 @@ new #[Layout('layouts.guest')] class extends Component
     {
         $otpCode = random_int(100000, 999999);
         session(['otp' => $otpCode]);
+        $normalizedPhone = $this->normalizePhoneNumber($phoneNumber);
+
+        $sid    = env('TWILIO_SID');
+        $token  = env('TWILIO_AUTH_TOKEN');
+        $from   = env('TWILIO_WHATSAPP_FROM');
+        $client = new TwilioClient($sid, $token);
+
+        try {
+            $client->messages->create('whatsapp:+' . $normalizedPhone, [
+                "from" => $from,
+                "body" => "Kode verifikasi pendaftaran Anda adalah: {$otpCode}"
+            ]);
+        } catch (\Twilio\Exceptions\TwilioException $e) {
+            session()->flash('error', 'Gagal mengirim OTP WhatsApp: ' . $e->getMessage());
+            $this->otpSent = false;
+        }
     }
 
     private function normalizePhoneNumber(?string $phoneNumber): ?string
@@ -243,4 +265,9 @@ new #[Layout('layouts.guest')] class extends Component
         }
         return $number;
     }
-}; ?>
+
+    public function render()
+    {
+        return view('livewire.pages.auth.register');
+    }
+}

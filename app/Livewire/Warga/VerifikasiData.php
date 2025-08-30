@@ -5,12 +5,9 @@ namespace App\Livewire\Warga;
 use App\Models\ProfilDesa;
 use App\Models\User;
 use App\Models\VerifikasiPenduduk;
-use App\Models\Company;
-use App\Models\ProfilDesa; // <-- DITAMBAHKAN
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
-use Illuminate\Http\Request;
 
 #[Layout('layouts.app')]
 class VerifikasiData extends Component
@@ -20,7 +17,8 @@ class VerifikasiData extends Component
     public $kk;
     public $nama;
     public $alamat;
-    public $rt_rw;
+    public $rt;
+    public $rw;
     public $tempat_lahir;
     public $tanggal_lahir;
     public $jenis_kelamin;
@@ -66,7 +64,8 @@ class VerifikasiData extends Component
             'kk' => 'required|string|size:16',
             'nama' => 'required|string|max:100',
             'alamat' => 'required|string|max:100',
-            'rt_rw' => 'required|string|max:7',
+            'rt' => 'required|string|max:3|digits:3',
+            'rw' => 'required|string|max:3|digits:3',
             'tempat_lahir' => 'required|string|max:20',
             'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:L,P',
@@ -74,8 +73,8 @@ class VerifikasiData extends Component
             'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
             'kepala_keluarga' => 'required|boolean',
             'pekerjaan' => 'required|string|max:100',
-            'pendidikan' => 'required|in:Tidak Sekolah,Belum Sekolah,SD,SMP,SMA,D1,D2,D3,D4/S1,S2,S3',
-            'golongan_darah' => 'required|in:A,B,AB,O,Tidak Tahu',
+            'pendidikan' => 'required|in:Tidak Sekolah,Belum Sekolah,SD/Sederajat,SMP/Sederajat,SMA/Sederajat,D1,D2,D3,D4/S1,S2,S3',
+            'golongan_darah' => 'required|in:A+,A-,B+,B-,AB+,AB-,O+,O-,Tidak Tahu',
         ];
 
         if ($this->hasRegisteredWithEmail) {
@@ -97,14 +96,10 @@ class VerifikasiData extends Component
     {
         $validatedData = $this->validate();
  
-        if (isset($validatedData['pendidikan']) && $validatedData['pendidikan'] === 'D4') {
-            $validatedData['pendidikan'] = 'D4/S1';
-        }
-
         $user = Auth::user();
 
         if (!$this->hasRegisteredWithEmail && !empty($validatedData['email'])) {
-            $emailSearchHash = hash('sha256', strtolower($validatedData['email']));
+            $emailSearchHash = User::hashForSearch(strtolower($validatedData['email']));
             if (User::where('email_search_hash', $emailSearchHash)->where('id', '!=', $user->id)->exists()) {
                 $this->addError('email', 'Alamat email ini sudah digunakan oleh akun lain.');
                 return;
@@ -113,17 +108,15 @@ class VerifikasiData extends Component
 
         if (!$this->hasRegisteredWithPhone && !empty($validatedData['no_hp'])) {
             $normalizedPhone = $this->normalizePhoneNumber($validatedData['no_hp']);
-            $teleponSearchHash = hash('sha256', $normalizedPhone);
+            $teleponSearchHash = User::hashForSearch($normalizedPhone);
             if (User::where('telepon_search_hash', $teleponSearchHash)->where('id', '!=', $user->id)->exists()) {
                 $this->addError('no_hp', 'Nomor HP ini sudah digunakan oleh akun lain.');
                 return;
             }
         }
 
-        $nikSearchHash = hash_hmac('sha256', $validatedData['nik'], hex2bin(env('IMS_PEPPER_KEY')));
-        $existingVerification = VerifikasiPenduduk::where('nik_search_hash', $nikSearchHash)->first();
-
-        if ($existingVerification) {
+        $nikSearchHash = VerifikasiPenduduk::hashForSearch($validatedData['nik']);
+        if (VerifikasiPenduduk::where('nik_search_hash', $nikSearchHash)->exists()) {
             $this->addError('nik', 'NIK ini sudah pernah diajukan untuk verifikasi.');
             return;
         }
@@ -134,12 +127,16 @@ class VerifikasiData extends Component
             return;
         }
 
-        VerifikasiPenduduk::create(array_merge($validatedData, [
-            'user_id' => $user->id,
-            'id_desa' => $profilDesa->id,
-            'company_id' => $user->company_id,
-            'status' => 'pending',
-        ]));
+        $verification = new VerifikasiPenduduk();
+        
+        $verification->fill($validatedData);
+        
+        $verification->user_id = $user->id;
+        $verification->desa_id = $profilDesa->id;
+        $verification->company_id = $user->company_id;
+        $verification->status = 'pending';
+
+        $verification->save();
 
         $this->mount();
         session()->flash('status', 'Data verifikasi Anda telah berhasil dikirim dan sedang menunggu persetujuan admin.');
@@ -149,10 +146,10 @@ class VerifikasiData extends Component
     {
         if (empty($phoneNumber)) return null;
         $number = preg_replace('/[^0-9]/', '', $phoneNumber);
-        if (substr($number, 0, 1) === '0') {
+        if (str_starts_with($number, '0')) {
             return '62' . substr($number, 1);
         }
-        if (substr($number, 0, 2) !== '62') {
+        if (!str_starts_with($number, '62')) {
             return '62' . $number;
         }
         return $number;
@@ -163,3 +160,4 @@ class VerifikasiData extends Component
         return view('livewire.warga.verifikasi-data');
     }
 }
+

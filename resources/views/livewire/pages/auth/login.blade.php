@@ -58,7 +58,8 @@ new #[Layout('layouts.guest')] class extends Component
         $user = null;
 
         if ($isEmail) {
-            $emailSearchHash = hash('sha256', strtolower($this->loginField));
+            // DIGANTI: Menggunakan metode hash yang konsisten dari model User
+            $emailSearchHash = User::hashForSearch($this->loginField);
             $user = User::where('email_search_hash', $emailSearchHash)->first();
         } else {
             $user = User::where('username', $this->loginField)->first();
@@ -76,10 +77,6 @@ new #[Layout('layouts.guest')] class extends Component
         RateLimiter::clear($this->throttleKey());
         Session::regenerate();
 
-        $loggedInUser = auth()->user();
-        if ($loggedInUser->hasAnyRole(['super_admin', 'admin'])) {
-            return redirect()->to('/admin');
-        }
         return $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
 

@@ -4,6 +4,7 @@ namespace App\Livewire\Auth;
 
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Filament\Facades\Filament;
 
 class Login extends Component
 {
@@ -13,8 +14,7 @@ class Login extends Component
 
     public function mount()
     {
-        // Fungsi ini bisa dibiarkan kosong. Middleware Filament akan menangani
-        // pengguna yang sudah login.
+        
     }
 
     public function login()
@@ -24,17 +24,26 @@ class Login extends Component
             'password' => 'required',
         ]);
 
-        if (Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
-            session()->regenerate();
-
-            // PENTING: JANGAN LAKUKAN REDIRECT DI SINI.
-            // Biarkan method ini selesai. Filament akan secara otomatis
-            // mendeteksi login yang berhasil dan mengarahkan pengguna
-            // ke halaman yang benar (termasuk ke subdomain yang sesuai).
+        if (!Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+            $this->addError('email', trans('auth.failed'));
             return;
         }
 
-        $this->addError('email', trans('auth.failed'));
+        session()->regenerate();
+
+        $user = Auth::user();
+        $tenant = $user->company;
+
+        if (!$tenant) {
+            Auth::logout();
+            session()->flash('error', 'Akun Anda tidak terhubung dengan desa manapun.');
+            return $this->redirect(route('login'));
+        }
+
+        $panel = Filament::getPanel('admin');
+        $tenantUrl = $panel->getTenantUrl($tenant);
+
+        return redirect()->to($tenantUrl);
     }
 
     public function render()

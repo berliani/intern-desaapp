@@ -74,14 +74,11 @@
                         </div>
 
                         <div>
-                            {{-- Label dinamis: Tanda bintang (*) hanya muncul jika email wajib diisi --}}
                             <x-input-label for="email">Email @if($hasRegisteredWithEmail) <span class="text-red-500">*</span> @endif</x-input-label>
-
                             <x-text-input
                                 wire:model="email"
                                 id="email"
                                 type="email"
-                                {{-- Class dan atribut readonly menjadi dinamis --}}
                                 class="block w-full {{ $hasRegisteredWithEmail ? 'bg-gray-100 cursor-not-allowed' : '' }}"
                                 :readonly="$hasRegisteredWithEmail"
                                 placeholder="{{ !$hasRegisteredWithEmail ? 'Masukkan alamat email (opsional)' : '' }}" />
@@ -107,20 +104,23 @@
                         </div>
 
                         <div>
-                            <x-input-label for="rt_rw">RT/RW <span class="text-red-500">*</span></x-input-label>
-                            <x-text-input wire:model="rt_rw" id="rt_rw" type="text" class="block w-full" placeholder="Contoh: 001/002" required />
-                            <x-input-error :messages="$errors->get('rt_rw')" class="mt-2" />
+                            <x-input-label for="rt">RT <span class="text-red-500">*</span></x-input-label>
+                            <x-text-input wire:model="rt" id="rt" type="text" class="block w-full" placeholder="Contoh: 001" required maxlength="3" />
+                            <x-input-error :messages="$errors->get('rt')" class="mt-2" />
+                        </div>
+                        
+                        <div>
+                            <x-input-label for="rw">RW <span class="text-red-500">*</span></x-input-label>
+                            <x-text-input wire:model="rw" id="rw" type="text" class="block w-full" placeholder="Contoh: 002" required maxlength="3" />
+                            <x-input-error :messages="$errors->get('rw')" class="mt-2" />
                         </div>
 
                         <div>
-                            {{-- Label dinamis: Tanda bintang (*) hanya muncul jika nomor HP wajib diisi --}}
                             <x-input-label for="no_hp">Nomor HP @if($hasRegisteredWithPhone) <span class="text-red-500">*</span> @endif</x-input-label>
-
                             <x-text-input
                                 wire:model="no_hp"
                                 id="no_hp"
                                 type="text"
-                                {{-- Class dan atribut readonly menjadi dinamis --}}
                                 class="block w-full {{ $hasRegisteredWithPhone ? 'bg-gray-100 cursor-not-allowed' : '' }}"
                                 :readonly="$hasRegisteredWithPhone"
                                 placeholder="{{ !$hasRegisteredWithPhone ? 'Masukkan nomor HP (opsional)' : '08xxxxxxxxxx' }}" />
@@ -166,15 +166,16 @@
                         <div>
                             <x-input-label for="pendidikan">Pendidikan Terakhir <span class="text-red-500">*</span></x-input-label>
                             <select wire:model="pendidikan" id="pendidikan" class="block w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
+                                <option value="">Pilih Pendidikan</option>
                                 <option value="Tidak Sekolah">Tidak Sekolah</option>
                                 <option value="Belum Sekolah">Belum Sekolah</option>
-                                <option value="SD">SD</option>
-                                <option value="SMP">SMP</option>
-                                <option value="SMA">SMA</option>
+                                <option value="SD/Sederajat">SD/Sederajat</option>
+                                <option value="SMP/Sederajat">SMP/Sederajat</option>
+                                <option value="SMA/Sederajat">SMA/Sederajat</option>
                                 <option value="D1">D1</option>
                                 <option value="D2">D2</option>
                                 <option value="D3">D3</option>
-                                <option value="D4">D4/S1</option>
+                                <option value="D4/S1">D4/S1</option>
                                 <option value="S2">S2</option>
                                 <option value="S3">S3</option>
                             </select>
@@ -191,10 +192,14 @@
                             <x-input-label for="golongan_darah">Golongan Darah <span class="text-red-500">*</span></x-input-label>
                             <select wire:model="golongan_darah" id="golongan_darah" class="block w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
                                 <option value="">Pilih Gol. Darah</option>
-                                <option value="A">A</option>
-                                <option value="B">B</option>
-                                <option value="AB">AB</option>
-                                <option value="O">O</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
                                 <option value="Tidak Tahu">Tidak Tahu</option>
                             </select>
                             <x-input-error :messages="$errors->get('golongan_darah')" class="mt-2" />

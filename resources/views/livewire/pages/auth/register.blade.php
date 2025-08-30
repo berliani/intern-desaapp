@@ -6,7 +6,6 @@ use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
@@ -24,10 +23,49 @@ new #[Layout('layouts.guest')] class extends Component
     public string $telepon = '';
     public string $password = '';
     public string $password_confirmation = '';
-    public function updatedNik()
+    public string $verificationMethod = 'email';
+    public string $generatedCaptcha = '';
+    public string $captcha = '';
+    public string $otp = '';
+    public bool $otpSent = false;
+    public bool $otpVerified = false;
+    public bool $nikFound = false;
+
+    public function mount(): void
     {
-        if (strlen($this->nik) === 16) {
-            $penduduk = Penduduk::where('nik', $this->nik)->first();
+        $companyFromRequest = request()->get('company');
+
+        if ($companyFromRequest) {
+            session(['registration_company_id' => $companyFromRequest->id]);
+        }
+
+        if (!session()->has('registration_company_id')) {
+            abort(404, 'Halaman pendaftaran tidak valid. Pastikan Anda mengakses melalui subdomain yang benar.');
+        }
+
+        $this->generateCaptcha();
+    }
+
+    public function generateCaptcha(): void
+    {
+        $this->generatedCaptcha = Str::random(6);
+        session(['captcha' => $this->generatedCaptcha]);
+        $this->captcha = '';
+    }
+
+    public function updatedNik(string $value): void
+    {
+        $this->name = '';
+        $this->nikFound = false;
+        $this->resetErrorBag('nik');
+
+        if (strlen($value) === 16) {
+            $companyId = session('registration_company_id');
+            $nikSearchHash = hash('sha256', $value);
+            $penduduk = Penduduk::where('nik_search_hash', $nikSearchHash)
+                ->where('company_id', $companyId)
+                ->first();
+
             if ($penduduk) {
                 if ($penduduk->user_id) {
                     $this->addError('nik', 'NIK ini sudah terdaftar dan terhubung dengan akun lain.');
