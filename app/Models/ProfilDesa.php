@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
-use App\IMS\EnkripsiIMS;
 
 class ProfilDesa extends Model
 {
@@ -28,10 +27,6 @@ class ProfilDesa extends Model
         'thumbnails',
         'logo',
         'alamat',
-        'telepon_encrypted',
-        'telepon_search_hash',
-        'email_encrypted',
-        'email_search_hash',
         'website',
         'visi',
         'misi',
@@ -43,6 +38,7 @@ class ProfilDesa extends Model
         // Atribut virtual untuk form (telepon & email akan dienkripsi oleh mutator)
         'telepon',
         'email',
+        'alamat',
 
         // Kolom-kolom baru yang dienkripsi dan di-hash
         'email_encrypted',
@@ -52,7 +48,11 @@ class ProfilDesa extends Model
         'alamat_encrypted',
         'alamat_search_hash',
     ];
+  
+    // agar accessor selalu dijalankan saat data model diubah menjadi array.
+    protected $appends = ['telepon', 'email', 'alamat'];
 
+    // Cast thumbnails sebagai array
     protected $casts = [
         'thumbnails' => 'array',
         'sejarah' => 'string',
@@ -125,6 +125,8 @@ class ProfilDesa extends Model
             return 'Gagal Dekripsi';
         }
     }
+
+    // Alamat Accessor & Mutator 
     public function setAlamatAttribute($value)
     {
         if (!empty($value)) {
@@ -135,12 +137,13 @@ class ProfilDesa extends Model
 
     public function getAlamatAttribute()
     {
-        $encrypted = $this->attributes['alamat_encrypted'] ?? null;
+        $encrypted = $this->attributes['alamat_encrypted'] ?? $this->attributes['alamat'] ?? null;
         if (!$encrypted) return null;
         try {
             return self::getEncryptor()->decrypt($encrypted);
         } catch (\Exception $e) {
-            return 'Gagal Dekripsi';
+            // Fallback to plain text if decryption fails (for old data)
+            return $this->attributes['alamat_encrypted'] ? 'Gagal Dekripsi' : $this->attributes['alamat'];
         }
     }
     // --- AKHIR ENKRIPSI ---

@@ -14,6 +14,31 @@ class CreatePenduduk extends CreateRecord
 {
     protected static string $resource = PendudukResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Siapkan array untuk menampung semua data yang akan diisi otomatis
+        $formData = [];
+
+        // Ambil data alamat dari tenant (sama seperti di default() pada Resource)
+        $tenant = Filament::getTenant();
+        if ($tenant && $tenant->profilDesa) {
+            $formData['desa_kelurahan'] = $tenant->profilDesa->nama_desa;
+            $formData['kecamatan'] = $tenant->profilDesa->kecamatan;
+            $formData['kabupaten'] = $tenant->profilDesa->kabupaten;
+            $formData['provinsi'] = $tenant->profilDesa->provinsi;
+        }
+
+        // Cek apakah ada parameter 'kk' di URL dan tambahkan ke data form
+        if (request()->has('kk')) {
+            $formData['kk'] = request()->query('kk');
+        }
+
+        // Isi form dengan semua data yang sudah kita kumpulkan
+        $this->form->fill($formData);
+    }
+
      protected function mutateFormDataBeforeCreate(array $data): array
     {
        // 1. Dapatkan tenant (desa/company) yang sedang aktif
@@ -34,6 +59,15 @@ class CreatePenduduk extends CreateRecord
     protected function afterCreate(): void
     {
         $record = $this->record;
+        // Kita perlu mendapatkan nilai KK mentah dari form data karena $record->kk akan terdekripsi
+        $plainKk = $this->form->getState()['kk']; 
+        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+        if (!$pepperKey) {
+            // Handle error jika pepper key tidak ada
+            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
+            return;
+        }
+        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
 
         // --- PERBAIKAN DIMULAI DI SINI ---
         // Kita perlu mendapatkan nilai KK mentah dari form data karena $record->kk akan terdekripsi

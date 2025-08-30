@@ -40,6 +40,7 @@ class ListPenduduks extends ListRecords
      */
     protected function getTableRecordUrlUsing(): ?Closure
     {
+        return fn (Model $record): string => static::getResource()::getUrl('view', [
         return fn(Model $record): string => static::getResource()::getUrl('view', [
             'record' => $record,
             'tenant' => Filament::getTenant(),

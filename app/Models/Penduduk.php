@@ -7,10 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough; 
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
-use Carbon\Carbon;
 use Carbon\Carbon;
 
 class Penduduk extends Model
@@ -22,14 +21,10 @@ class Penduduk extends Model
     protected $fillable = [
         'company_id',
         'id_desa',
-        'nik_encrypted',
-        'nik_search_hash',
-        'nik_prefix_hash',
-        'kk_encrypted',
-        'kk_search_hash',
         'nama',
         'alamat',
-        'rt_rw',
+        'rt',
+        'rw',
         'desa_kelurahan',
         'kecamatan',
         'kabupaten',
@@ -55,6 +50,7 @@ class Penduduk extends Model
         'tanggal_lahir',
         'no_hp',
         'email',
+        'alamat',
 
         // Kolom-kolom baru yang dienkripsi dan di-hash
         'email_encrypted',
@@ -70,12 +66,19 @@ class Penduduk extends Model
         'tanggal_lahir_search_hash',
         'no_hp_encrypted',
         'no_hp_search_hash',
+        'alamat_encrypted', 
+        'alamat_search_hash', 
     ];
+
+    //  agar accessor selalu dijalankan saat data model diubah menjadi array, sehingga form edit akan terisi otomatis.
+    protected $appends = ['nik', 'kk', 'tanggal_lahir', 'no_hp', 'email', 'alamat'];
+
 
     protected $casts = [
         'kepala_keluarga' => 'boolean',
         'jenis_kelamin' => 'string',
     ];
+
 
     // --- BLOK KODE ENKRIPSI ---
     private static ?EnkripsiIMS $encryptorInstance = null;
@@ -210,15 +213,40 @@ class Penduduk extends Model
         }
     }
 
+    // -Alamat Accessor & Mutator ---
+    public function setAlamatAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['alamat_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['alamat_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        }
+    }
+
+    public function getAlamatAttribute()
+    {
+        $encrypted = $this->attributes['alamat_encrypted'] ?? null;
+        if (!$encrypted) return null;
+        try {
+            return self::getEncryptor()->decrypt($encrypted);
+        } catch (\Exception $e) {
+            return 'Gagal Dekripsi';
+        }
+    }
+    // --- AKHIR BLOK KODE ENKRIPSI ---
+
+    /**
+     * Mendapatkan company (tenant) yang memiliki penduduk ini melalui profil desa.
+     * Relasi ini PENTING untuk multi-tenancy Filament.
+     */
     public function company(): HasOneThrough
     {
         return $this->hasOneThrough(
-            Company::class,
-            ProfilDesa::class,
-            'id',
-            'id',
-            'desa_id',
-            'company_id'
+            Company::class,      // Model tujuan akhir (Company)
+            ProfilDesa::class,   // Model perantara (ProfilDesa)
+            'id',                // Foreign key di tabel ProfilDesa yang merujuk ke desa_id di Penduduk
+            'id',                // Foreign key di tabel Company yang merujuk ke company_id di ProfilDesa
+            'desa_id',           // Local key di tabel Penduduk
+            'company_id'         // Local key di tabel ProfilDesa
         );
     }
 
@@ -271,7 +299,7 @@ class Penduduk extends Model
     }
 
     /**
-     * PERBAIKAN: Relasi ke KartuKeluarga sekarang menggunakan search_hash.
+     * Relasi ke KartuKeluarga sekarang menggunakan search_hash.
      */
     public function kartuKeluarga()
     {

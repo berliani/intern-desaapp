@@ -20,6 +20,7 @@ use Closure;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Grid;
 use Filament\Support\RawJs;
+
 class PendudukResource extends Resource
 {
     protected static ?string $model = Penduduk::class;
@@ -66,7 +67,9 @@ class PendudukResource extends Resource
                                     ->label('NIK')
                                     ->required()
                                     ->maxLength(16)
-
+                              
+                                    // --- PERBAIKAN VALIDASI ---
+                                    // Mengganti ->unique() dengan rule custom yang menggunakan hash
                                     ->rule(function (?Model $record): Closure {
                                         return function (string $attribute, $value, Closure $fail) use ($record) {
                                             $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
@@ -145,6 +148,7 @@ class PendudukResource extends Resource
                                         'AB-' => 'AB-',
                                         'O+' => 'O+',
                                         'O-' => 'O-',
+                                        '-' => '-',
                                         'Tidak Tahu' => 'Tidak Tahu',
                                     ]),
                             ])
@@ -153,6 +157,26 @@ class PendudukResource extends Resource
 
       Section::make('Alamat & Status')
                     ->schema([
+                        Forms\Components\Grid::make()
+                            ->schema([
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('rt')
+                                            ->label('RT')
+                                            ->required()
+                                            ->maxLength(3)
+                                            ->placeholder('000'),
+                                        Forms\Components\TextInput::make('rw')
+                                            ->label('RW')
+                                            ->required()
+                                            ->maxLength(3)
+                                            ->placeholder('000'),
+                                    ]),
+                                Forms\Components\TextInput::make('desa_kelurahan')
+                                    ->label('Desa/Kelurahan')
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated()
                         Grid::make(2)->schema([
                             // --- PERUBAHAN DIMULAI DI SINI ---
                             Forms\Components\Grid::make(2)->schema([
@@ -178,6 +202,8 @@ class PendudukResource extends Resource
                                 Forms\Components\TextInput::make('kecamatan')
                                     ->label('Kecamatan')
                                     ->required()
+                                    ->disabled()
+                                    ->dehydrated()
                                     ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->kecamatan),
 
@@ -185,6 +211,8 @@ class PendudukResource extends Resource
                                 Forms\Components\TextInput::make('kabupaten')
                                     ->label('Kabupaten/Kota')
                                     ->required()
+                                    ->disabled()
+                                    ->dehydrated()
                                     ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->kabupaten),
 
@@ -192,6 +220,8 @@ class PendudukResource extends Resource
                                 Forms\Components\TextInput::make('provinsi')
                                     ->label('Provinsi')
                                     ->required()
+                                    ->disabled()
+                                    ->dehydrated()
                                     ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->provinsi)
                                     ->columnSpanFull(),
@@ -245,8 +275,10 @@ class PendudukResource extends Resource
                                 Forms\Components\Select::make('pendidikan')
                                     ->options([
                                         'Tidak Sekolah' => 'Tidak Sekolah',
+                                        'Belum Sekolah' => 'Belum Sekolah',
                                         'SD/Sederajat' => 'SD/Sederajat',
                                         'SMP/Sederajat' => 'SMP/Sederajat',
+                                        'SMA/Sederaja' => 'SMA/Sederajat',
                                         'SMA/Sederajat' => 'SMA/Sederajat',
                                         'D1' => 'D1',
                                         'D2' => 'D2',
@@ -328,11 +360,17 @@ class PendudukResource extends Resource
                     ->label('KK')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('alamat')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        if (!$pepperKey) return $query;
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('alamat_search_hash', $hashedSearch);
+                    })
                     ->limit(30),
-                Tables\Columns\TextColumn::make('rt_rw')
+                Tables\Columns\TextColumn::make('rt')
                     ->label('RT/RW')
-                    ->searchable(),
+                    ->formatStateUsing(fn($record) => $record->rt . '/' . $record->rw)
+                    ->searchable(['rt', 'rw']),
                 Tables\Columns\TextColumn::make('no_hp')
                     ->label('Nomor HP')
                     ->searchable(query: function (Builder $query, string $search): Builder {
@@ -396,6 +434,8 @@ class PendudukResource extends Resource
                         'AB-' => 'AB-',
                         'O+' => 'O+',
                         'O-' => 'O-',
+                        '-' => '-',
+                        'Tidak Tahu' => 'Tidak Tahu',
                     ]),
             ])
             ->headerActions([
@@ -422,7 +462,9 @@ class PendudukResource extends Resource
                                 'tanggal_lahir' => '1990-01-01',
                                 'golongan_darah' => 'O',
                                 'alamat' => 'Jl. Contoh No. 123',
-                                'rt_rw' => '001/002',
+                                'rt' => '001',
+                                'rw' => '002',
+                                'desa_kelurahan' => 'Sukamaju',
                                 'desa_kelurahan' => 'Sukamaju',
                                 'kecamatan' => 'Cianjur',
                                 'kabupaten' => 'Bandung',
@@ -443,7 +485,8 @@ class PendudukResource extends Resource
                                 'tanggal_lahir' => '1992-05-15',
                                 'golongan_darah' => 'A',
                                 'alamat' => 'Jl. Contoh No. 123',
-                                'rt_rw' => '001/002',
+                                'rt' => '001',
+                                'rw' => '002',
                                 'desa_kelurahan' => 'Sukamaju',
                                 'kecamatan' => 'Cianjur',
                                 'kabupaten' => 'Bandung',

@@ -61,7 +61,6 @@ class ProfilDesaResource extends Resource
         return 'profildesas';
     }
 
-
     public static function form(Form $form): Form
     {
         return $form
@@ -100,7 +99,7 @@ class ProfilDesaResource extends Resource
                                                         'dimensions' => 'Gambar harus memiliki rasio 16:9',
                                                         'uploaded' => 'Upload gagal - periksa ukuran file dan format gambar'
                                                     ])
-                                                    ->enableOpen(),
+                                                    ->openable(),
 
                                                 Forms\Components\FileUpload::make('logo')
                                                     ->label('Logo Desa')
@@ -120,7 +119,7 @@ class ProfilDesaResource extends Resource
                                                         'dimensions' => 'Logo harus memiliki rasio 1:1 (persegi)',
                                                         'uploaded' => 'Upload gagal - periksa ukuran file dan format gambar'
                                                     ])
-                                                    ->enableOpen(),
+                                                    ->openable(),
                                             ]),
                                     ]),
 
@@ -233,6 +232,8 @@ class ProfilDesaResource extends Resource
                     ])
                     ->columnSpanFull(),
                 // DITAMBAHKAN: Field tersembunyi untuk menyimpan data otomatis
+                Forms\Components\Hidden::make('company_id')->default(fn () => Auth::user()->company_id),
+                Forms\Components\Hidden::make('created_by')->default(fn () => Auth::id()),
                 Forms\Components\Hidden::make('company_id')->default(fn() => Auth::user()->company_id),
                 Forms\Components\Hidden::make('created_by')->default(fn() => Auth::id()),
             ]);
@@ -288,6 +289,17 @@ class ProfilDesaResource extends Resource
                         return $query->where('email_search_hash', $hashedSearch);
                     }),
 
+
+                TextColumn::make('alamat')
+                    ->label('Alamat')
+                    ->limit(30)
+                    ->tooltip(fn (ProfilDesa $record): string => $record->alamat ?? '')
+                    ->searchable(isIndividual: true, isGlobal: true, query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('alamat_search_hash', $hashedSearch);
+                    }),
+
                 TextColumn::make('updated_at')
                     ->label('Terakhir Diperbarui')
                     ->dateTime('d/m/Y H:i')
@@ -301,6 +313,9 @@ class ProfilDesaResource extends Resource
                 Tables\Actions\EditAction::make(),
                 // Tables\Actions\DeleteAction::make(),
                 Tables\Actions\RestoreAction::make()
+                    ->visible(fn ($record) => $record->trashed()),
+                Tables\Actions\ForceDeleteAction::make()
+                    ->visible(fn ($record) => $record->trashed()),
                     ->visible(fn($record) => $record->trashed()),
                 Tables\Actions\ForceDeleteAction::make()
                     ->visible(fn($record) => $record->trashed()),
@@ -334,7 +349,14 @@ class ProfilDesaResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        return parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
+    }
+}
 
         return ProfilDesa::query()->where('company_id', Filament::getTenant()->id);
     }
 }
+

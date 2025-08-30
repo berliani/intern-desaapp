@@ -1,2 +1,119 @@
 <?php
-return sg_load('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');
+
+namespace App\Filament\Resources\KartuKeluargaResource\Pages;
+
+use App\Filament\Resources\KartuKeluargaResource;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Actions;
+use Filament\Forms;
+use App\Models\ProfilDesa;
+use App\Models\Penduduk;
+use Illuminate\Support\Collection;
+use Filament\Tables;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Filament\Notifications\Notification;
+use App\Exports\KartuKeluargaExporter; // Import Exporter yang baru dibuat
+use Maatwebsite\Excel\Facades\Excel; // Import facade Excel
+
+class ListKartuKeluarga extends ListRecords
+{
+    protected static string $resource = KartuKeluargaResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            Actions\Action::make('exportAll')
+                ->label('Ekspor Semua')
+                ->icon('heroicon-o-document-arrow-up')
+                ->color('success')
+                ->form([
+                    Forms\Components\Select::make('id_desa')
+                        ->label('Desa')
+                        ->options(ProfilDesa::pluck('nama_desa', 'id'))
+                        ->placeholder('Semua Desa'),
+
+                    Forms\Components\Select::make('format')
+                        ->label('Format Ekspor')
+                        ->options([
+                            'pdf' => 'PDF',
+                            'excel' => 'Excel',
+                        ])
+                        ->default('pdf')
+                        ->required(),
+                ])
+                ->action(function (array $data) {
+                    $query = $this->getFilteredTableQuery();
+
+                    if (!empty($data['id_desa'])) {
+                        $query->where('id_desa', $data['id_desa']);
+                    }
+
+                    $kepalaKeluargas = $query->get();
+
+                    if ($kepalaKeluargas->isEmpty()) {
+                        Notification::make()
+                            ->title('Tidak ada data untuk diekspor')
+                            ->warning()
+                            ->send();
+                        return;
+                    }
+
+                    $kkSearchHashes = $kepalaKeluargas->pluck('kk_search_hash')->unique()->filter();
+                    
+                    if ($data['format'] === 'pdf') {
+                        $semuaPenduduk = Penduduk::whereIn('kk_search_hash', $kkSearchHashes)->get();
+                        $keluargas = $semuaPenduduk->groupBy('kk_search_hash')->map(function ($anggota) {
+                            $nomor_kk_asli = $anggota->first()->kk;
+                            return collect([$nomor_kk_asli => $anggota]);
+                        })->collapse();
+                        
+                        $dataForView = ['keluargas' => $keluargas];
+                        $pdf = Pdf::loadView('pdf.kartu-keluarga', $dataForView)->setPaper('a4', 'landscape');
+                        return response()->streamDownload(fn() => print($pdf->output()), 'semua-kartu-keluarga.pdf');
+                    } 
+                    elseif ($data['format'] === 'excel') {
+                        return Excel::download(new KartuKeluargaExporter($kkSearchHashes), 'semua-kartu-keluarga.xlsx');
+                    }
+                }),
+        ];
+    }
+
+    protected function getTableBulkActions(): array
+    {
+        return [
+            Tables\Actions\BulkAction::make('exportSelected')
+                ->label('Ekspor Terpilih')
+                ->icon('heroicon-o-document-arrow-up')
+                ->color('success')
+                ->form([
+                    Forms\Components\Select::make('format')
+                        ->label('Format Ekspor')
+                        ->options([
+                            'pdf' => 'PDF',
+                            'excel' => 'Excel',
+                        ])
+                        ->default('pdf')
+                        ->required(),
+                ])
+                ->action(function (Collection $records, array $data) {
+                    $kkSearchHashes = $records->pluck('kk_search_hash')->unique()->filter();
+                    
+                    if ($data['format'] === 'pdf') {
+                        $semuaPenduduk = Penduduk::whereIn('kk_search_hash', $kkSearchHashes)->get();
+                        $keluargas = $semuaPenduduk->groupBy('kk_search_hash')->map(function ($anggota) {
+                             $nomor_kk_asli = $anggota->first()->kk;
+                             return collect([$nomor_kk_asli => $anggota]);
+                        })->collapse();
+                        
+                        $dataForView = ['keluargas' => $keluargas];
+                        $pdf = Pdf::loadView('pdf.kartu-keluarga', $dataForView)->setPaper('a4', 'landscape');
+                        return response()->streamDownload(fn() => print($pdf->output()), 'kartu-keluarga-terpilih.pdf');
+                    }
+                    elseif ($data['format'] === 'excel') {
+                        return Excel::download(new KartuKeluargaExporter($kkSearchHashes), 'kartu-keluarga-terpilih.xlsx');
+                    }
+                })
+                ->deselectRecordsAfterCompletion(),
+        ];
+    }
+}

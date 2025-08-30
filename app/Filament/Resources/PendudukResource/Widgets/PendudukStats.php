@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Log;
 
 class PendudukStats extends BaseWidget
 {
@@ -87,7 +88,7 @@ class PendudukStats extends BaseWidget
         }
 
         // Debug log untuk memastikan filter berhasil diterima
-        \Log::info('PendudukStats menerima filter', [
+        Log::info('PendudukStats menerima filter', [
             'periode' => $this->periode,
             'dariTanggal' => $this->dariTanggal,
             'sampaiTanggal' => $this->sampaiTanggal
@@ -108,7 +109,7 @@ class PendudukStats extends BaseWidget
             $this->setPeriodeFilter($periode);
         }
 
-        \Log::info('PendudukStats menerima filter dari Dashboard', [
+        Log::info('PendudukStats menerima filter dari Dashboard', [
             'periode' => $this->periode,
             'dariTanggal' => $this->dariTanggal,
             'sampaiTanggal' => $this->sampaiTanggal
@@ -207,7 +208,7 @@ class PendudukStats extends BaseWidget
                     ->color('success'),
             ];
         } catch (\Exception $e) {
-            \Log::error('Error di PendudukStats: ' . $e->getMessage(), [
+            Log::error('Error di PendudukStats: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -219,14 +220,29 @@ class PendudukStats extends BaseWidget
             ];
         }
     }
+    
+    protected function hitungRtRw($query): array
+    {
+        // Menghitung jumlah RT unik (distinct) yang tidak kosong
+        $totalRt = (clone $query)
+            ->whereNotNull('rt')
+            ->where('rt', '<>', '')
+            ->distinct()
+            ->count('rt');
 
+        // Menghitung jumlah RW unik (distinct) yang tidak kosong
+        $totalRw = (clone $query)
+            ->whereNotNull('rw')
+            ->where('rw', '<>', '')
+            ->distinct()
+            ->count('rw');
+      
       protected function hitungRtRw($query = null): array
     {
         $baseQuery = $query ? clone $query : Penduduk::query();
 
         $totalRt = $baseQuery->clone()->whereNotNull('rt')->distinct()->count('rt');
         $totalRw = $baseQuery->clone()->whereNotNull('rw')->distinct()->count('rw');
-
         return [
             'total_rt' => $totalRt,
             'total_rw' => $totalRw,

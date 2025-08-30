@@ -10,10 +10,6 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 class ListProfilDesas extends ListRecords
 {
     protected static string $resource = ProfilDesaResource::class;
-
-    /**
-     * Tambahkan metode ini untuk handle redirect.
-     */
     public function mount(): void
     {
         parent::mount();

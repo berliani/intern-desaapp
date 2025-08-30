@@ -78,22 +78,19 @@ class ViewProfilDesa extends ViewRecord
                             ->size(Components\TextEntry\TextEntrySize::Large)
                             ->weight(FontWeight::Bold),
 
-                        Components\TextEntry::make('alamat')
+                        Components\TextEntry::make('alamat_lengkap')
                             ->label('Alamat Lengkap')
-                            ->formatStateUsing(function ($record) {
-                                // Start with the base address
+                            ->state(function ($record) {
+                                // Start with the base address (which is decrypted by accessor)
                                 $address = $record->alamat;
-
                                 // Add the province if it exists
                                 if (!empty($record->provinsi)) {
                                     $address .= ', ' . $record->provinsi;
                                 }
-
                                 // Add the postal code if it exists
                                 if (!empty($record->kode_pos)) {
                                     $address .= ' ' . $record->kode_pos;
                                 }
-
                                 return $address;
                             })
                             ->icon('heroicon-o-map-pin')
@@ -163,7 +160,7 @@ class ViewProfilDesa extends ViewRecord
                     ->schema([
                         Components\TextEntry::make('luas_wilayah')
                             ->label('Luas Wilayah')
-                            ->state(function () use ($batasWilayah) {
+                            ->state(function() use ($batasWilayah) {
                                 if (!$batasWilayah) return '-';
                                 return number_format($batasWilayah->luas_wilayah, 0, ',', '.') . ' m²';
                             })
@@ -208,7 +205,7 @@ class ViewProfilDesa extends ViewRecord
                         Components\ViewEntry::make('potensi_desa')
                             ->label(false)
                             ->view('filament.resources.profil-desa-resource.potensi-table')
-                            ->state(function () use ($batasWilayah) {
+                            ->state(function() use ($batasWilayah) {
                                 return [
                                     'potensi' => $batasWilayah?->potensi_desa ?? [],
                                 ];
@@ -234,7 +231,7 @@ class ViewProfilDesa extends ViewRecord
                         Components\Actions::make([
                             Components\Actions\Action::make('tambah_data')
                                 ->label('Tambah Data Batas & Potensi')
-                                ->url(fn(): string => route('filament.admin.resources.batas-wilayah-potensis.create', [
+                                ->url(fn (): string => route('filament.admin.resources.batas-wilayah-potensis.create', [
                                     'tenant' => Filament::getTenant(),
                                     'profil_desa_id' => $this->record->id
                                 ]))
@@ -242,8 +239,8 @@ class ViewProfilDesa extends ViewRecord
                                 ->button()
                                 ->color('primary')
                         ])
-                            ->alignment('center')
-                            ->columnSpanFull(),
+                        ->alignment('center')
+                        ->columnSpanFull(),
                     ])
                     ->collapsible(),
             ]);
@@ -251,6 +248,8 @@ class ViewProfilDesa extends ViewRecord
 
     protected function getFooterWidgets(): array
     {
-        return [];
+        return [
+
+        ];
     }
 }

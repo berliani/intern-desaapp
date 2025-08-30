@@ -1,5 +1,6 @@
 @php
     $anggota = $getState()['anggota'] ?? collect();
+    $tenant = $getState()['tenant'] ?? null; //ambil data tenant
 @endphp
 
 <div class="overflow-x-auto">
@@ -42,11 +43,11 @@
                         {{ $item->status_perkawinan }}
                     </td>
                     <td class="px-3 py-2 whitespace-nowrap text-sm text-gray-500">
-                        <a href="{{ route('filament.admin.resources.penduduks.view', ['record' => $item->id]) }}"
+                        <a href="{{ \App\Filament\Resources\PendudukResource::getUrl('view', ['record' => $item, 'tenant' => $tenant]) }}"
                            class="text-primary-600 hover:text-primary-900 px-3">
                             Lihat
                         </a>
-                        <a href="{{ route('filament.admin.resources.penduduks.edit', ['record' => $item->id]) }}"
+                        <a href="{{ \App\Filament\Resources\PendudukResource::getUrl('edit', ['record' => $item, 'tenant' => $tenant]) }}"
                            class="text-warning-600 hover:text-warning-900">
                             Edit
                         </a>
