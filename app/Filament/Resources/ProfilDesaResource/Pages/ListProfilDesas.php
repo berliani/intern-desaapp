@@ -1,2 +1,43 @@
 <?php
-return sg_load('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');
+
+namespace App\Filament\Resources\ProfilDesaResource\Pages;
+
+use App\Filament\Resources\ProfilDesaResource;
+use Filament\Actions;
+use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+
+class ListProfilDesas extends ListRecords
+{
+    protected static string $resource = ProfilDesaResource::class;
+
+        /**
+     * Tambahkan metode ini untuk handle redirect.
+     */
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Ambil query builder untuk resource ini
+        $query = static::getResource()::getEloquentQuery();
+
+        // Hitung jumlah record
+        $totalRecords = $query->count();
+
+        // Jika hanya ada satu record, redirect ke halaman view
+        if ($totalRecords === 1) {
+            $profilDesa = $query->first();
+            $this->redirect(static::getResource()::getUrl('view', ['record' => $profilDesa->getkey()]));
+        }
+    }
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            // Actions\CreateAction::make()
+            //     ->icon('heroicon-o-plus')
+            //     ->label('Tambah Profil Desa')
+
+        ];
+    }
+}

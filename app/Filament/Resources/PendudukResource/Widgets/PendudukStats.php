@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Livewire\Attributes\On;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Log;
 
 class PendudukStats extends BaseWidget
 {
@@ -87,7 +88,7 @@ class PendudukStats extends BaseWidget
         }
 
         // Debug log untuk memastikan filter berhasil diterima
-        \Log::info('PendudukStats menerima filter', [
+        Log::info('PendudukStats menerima filter', [
             'periode' => $this->periode,
             'dariTanggal' => $this->dariTanggal,
             'sampaiTanggal' => $this->sampaiTanggal
@@ -108,7 +109,7 @@ class PendudukStats extends BaseWidget
             $this->setPeriodeFilter($periode);
         }
 
-        \Log::info('PendudukStats menerima filter dari Dashboard', [
+        Log::info('PendudukStats menerima filter dari Dashboard', [
             'periode' => $this->periode,
             'dariTanggal' => $this->dariTanggal,
             'sampaiTanggal' => $this->sampaiTanggal
@@ -207,7 +208,7 @@ class PendudukStats extends BaseWidget
                     ->color('success'),
             ];
         } catch (\Exception $e) {
-            \Log::error('Error di PendudukStats: ' . $e->getMessage(), [
+            Log::error('Error di PendudukStats: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
             ]);
 
@@ -220,61 +221,83 @@ class PendudukStats extends BaseWidget
         }
     }
 
-    protected function hitungRtRw($query = null): array
+    // protected function hitungRtRw($query = null): array
+    // {
+    //     $result = [
+    //         'total_rt' => 0,
+    //         'total_rw' => 0,
+    //     ];
+
+    //     // Gunakan query yang diberikan atau buat query baru
+    //     if (!$query) {
+    //         $query = Penduduk::query();
+
+    //         // Terapkan filter tanggal jika ada dan bukan 'semua'
+    //         if ($this->dariTanggal && $this->sampaiTanggal && $this->periode !== 'semua') {
+    //             $startDateTime = Carbon::parse($this->dariTanggal)->startOfDay();
+    //             $endDateTime = Carbon::parse($this->sampaiTanggal)->endOfDay();
+
+    //             $query->whereBetween('created_at', [
+    //                 $startDateTime->toDateTimeString(),
+    //                 $endDateTime->toDateTimeString()
+    //             ]);
+    //         }
+    //     }
+
+    //     // Ambil semua data RT/RW yang tidak null
+    //     $rtRwList = (clone $query)->whereNotNull('rt_rw')
+    //                         ->where('rt_rw', '<>', '')
+    //                         ->pluck('rt_rw');
+
+    //     if ($rtRwList->isEmpty()) {
+    //         return $result;
+    //     }
+
+    //     // Array untuk menyimpan RT dan RW unik
+    //     $uniqueRt = [];
+    //     $uniqueRw = [];
+
+    //     // Proses data RT/RW
+    //     foreach ($rtRwList as $rtRw) {
+    //         // Pisahkan RT dan RW
+    //         $parts = explode('/', $rtRw);
+
+    //         if (count($parts) == 2) {
+    //             $rt = trim($parts[0]);
+    //             $rw = trim($parts[1]);
+
+    //             // Tambahkan ke array unik
+    //             $uniqueRt[$rt] = true;
+    //             $uniqueRw[$rw] = true;
+    //         }
+    //     }
+
+    //     $result['total_rt'] = count($uniqueRt);
+    //     $result['total_rw'] = count($uniqueRw);
+
+    //     return $result;
+    // }
+
+    protected function hitungRtRw($query): array
     {
-        $result = [
-            'total_rt' => 0,
-            'total_rw' => 0,
+        // Menghitung jumlah RT unik (distinct) yang tidak kosong
+        $totalRt = (clone $query)
+            ->whereNotNull('rt')
+            ->where('rt', '<>', '')
+            ->distinct()
+            ->count('rt');
+
+        // Menghitung jumlah RW unik (distinct) yang tidak kosong
+        $totalRw = (clone $query)
+            ->whereNotNull('rw')
+            ->where('rw', '<>', '')
+            ->distinct()
+            ->count('rw');
+
+        return [
+            'total_rt' => $totalRt,
+            'total_rw' => $totalRw,
         ];
-
-        // Gunakan query yang diberikan atau buat query baru
-        if (!$query) {
-            $query = Penduduk::query();
-
-            // Terapkan filter tanggal jika ada dan bukan 'semua'
-            if ($this->dariTanggal && $this->sampaiTanggal && $this->periode !== 'semua') {
-                $startDateTime = Carbon::parse($this->dariTanggal)->startOfDay();
-                $endDateTime = Carbon::parse($this->sampaiTanggal)->endOfDay();
-
-                $query->whereBetween('created_at', [
-                    $startDateTime->toDateTimeString(),
-                    $endDateTime->toDateTimeString()
-                ]);
-            }
-        }
-
-        // Ambil semua data RT/RW yang tidak null
-        $rtRwList = (clone $query)->whereNotNull('rt_rw')
-                            ->where('rt_rw', '<>', '')
-                            ->pluck('rt_rw');
-
-        if ($rtRwList->isEmpty()) {
-            return $result;
-        }
-
-        // Array untuk menyimpan RT dan RW unik
-        $uniqueRt = [];
-        $uniqueRw = [];
-
-        // Proses data RT/RW
-        foreach ($rtRwList as $rtRw) {
-            // Pisahkan RT dan RW
-            $parts = explode('/', $rtRw);
-
-            if (count($parts) == 2) {
-                $rt = trim($parts[0]);
-                $rw = trim($parts[1]);
-
-                // Tambahkan ke array unik
-                $uniqueRt[$rt] = true;
-                $uniqueRw[$rw] = true;
-            }
-        }
-
-        $result['total_rt'] = count($uniqueRt);
-        $result['total_rw'] = count($uniqueRw);
-
-        return $result;
     }
 
     protected function hitungPendidikan(int $totalPenduduk, $query = null): array

@@ -8,6 +8,7 @@ use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use App\Models\Penduduk;
+use Filament\Facades\Filament; 
 
 class EditPenduduk extends EditRecord
 {
@@ -16,33 +17,59 @@ class EditPenduduk extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            // Tenant-aware ViewAction
+            Actions\ViewAction::make()->url(fn(): string => $this->getResource()::getUrl('view', [
+                'record' => $this->getRecord(),
+                'tenant' => $this->getRecord()->company_id,
+            ])),
             Actions\ViewAction::make(),
             Actions\DeleteAction::make(),
             Actions\ForceDeleteAction::make()
-                ->visible(fn ($record) => $record->trashed()),
+                ->visible(fn($record) => $record->trashed()),
             Actions\RestoreAction::make()
-                ->visible(fn ($record) => $record->trashed()),
+                ->visible(fn($record) => $record->trashed()),
         ];
+    }
+
+    //  untuk mengisi field provinsi berdasarkan tenant yang sedang aktif
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $tenant = Filament::getTenant();
+        if ($tenant && $tenant->profilDesa) {
+            $data['provinsi'] = $tenant->profilDesa->provinsi;
+        }
+
+        return $data;
     }
 
     protected function afterSave(): void
     {
         $record = $this->record;
 
+        // Dapatkan nilai KK mentah dari form dan buat hash-nya
+        $plainKk = $this->form->getState()['kk'];
+        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+
+        if (!$pepperKey) {
+            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
+            return;
+        }
+
+        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
+
         if ($record->kepala_keluarga) {
             // Jika ini kepala keluarga, atur self-reference jika belum
             if ($record->kepala_keluarga_id !== $record->id) {
                 $record->kepala_keluarga_id = $record->id;
-                $record->save();
+                $record->saveQuietly(); // Simpan tanpa memicu event lagi
             }
 
-            // Update semua anggota dengan KK yang sama
-            Penduduk::where('kk', $record->kk)
+            // Update semua anggota dengan KK yang sama menggunakan HASH
+            Penduduk::where('kk_search_hash', $kkSearchHash)
                 ->where('id', '!=', $record->id)
-                ->whereNull('kepala_keluarga_id')
                 ->update(['kepala_keluarga_id' => $record->id]);
         } else {
-            // Cek jika ada anggota yang terkait dengan KK ini
+            // Cek jika ada anggota yang masih terkait dengan ID penduduk ini sebagai kepala keluarga
             $dependentCount = Penduduk::where('kepala_keluarga_id', $record->id)
                 ->where('id', '!=', $record->id)
                 ->count();
@@ -58,18 +85,16 @@ class EditPenduduk extends EditRecord
                 // Kembalikan status menjadi kepala keluarga
                 $record->kepala_keluarga = true;
                 $record->kepala_keluarga_id = $record->id;
-                $record->save();
+                $record->saveQuietly();
             } else {
-                // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama
-                $kepalaKeluarga = Penduduk::where('kk', $record->kk)
+                // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama menggunakan HASH
+                $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
                     ->where('kepala_keluarga', true)
                     ->where('id', '!=', $record->id)
                     ->first();
 
-                if ($kepalaKeluarga && $record->kepala_keluarga_id !== $kepalaKeluarga->id) {
-                    $record->kepala_keluarga_id = $kepalaKeluarga->id;
-                    $record->save();
-                }
+                $record->kepala_keluarga_id = $kepalaKeluarga ? $kepalaKeluarga->id : null;
+                $record->saveQuietly();
             }
         }
 
@@ -82,6 +107,10 @@ class EditPenduduk extends EditRecord
 
     protected function getRedirectUrl(): string
     {
-        return $this->getResource()::getUrl('view', ['record' => $this->record]);
+        // Pastikan URL redirect juga menyertakan tenant
+        return $this->getResource()::getUrl('view', [
+            'record' => $this->getRecord(),
+            'tenant' => Filament::getTenant(),
+        ]);
     }
 }

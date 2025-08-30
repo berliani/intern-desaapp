@@ -13,6 +13,9 @@ use Carbon\Carbon;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Collection;
 use App\Models\Penduduk;
+use Illuminate\Database\Eloquent\Model;
+use Closure;
+use Filament\Facades\Filament;
 
 class ListPenduduks extends ListRecords
 {
@@ -30,10 +33,17 @@ class ListPenduduks extends ListRecords
         $this->applyPeriodeFilter('semua');
     }
 
-    // TAMBAHKAN METHOD INI: Mengatur link saat baris tabel diklik
-    protected function getTableRecordUrlUsing(): ?\Closure
+    /**
+     * --- INI PERBAIKAN UTAMANYA ---
+     * Mengganti penggunaan route() dengan getUrl() untuk memastikan
+     * parameter 'tenant' disertakan secara otomatis.
+     */
+    protected function getTableRecordUrlUsing(): ?Closure
     {
-        return fn ($record): string => route('filament.admin.resources.penduduks.view', ['record' => $record]);
+        return fn (Model $record): string => static::getResource()::getUrl('view', [
+            'record' => $record,
+            'tenant' => Filament::getTenant(),
+        ]);
     }
 
     // Method untuk menerapkan filter periode

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\PendudukResource\Pages;
 
 use App\Filament\Resources\PendudukResource;
 use App\Models\Penduduk;
+use App\Models\ProfilDesa;
 use Filament\Notifications\Notification;
 use Filament\Actions;
 use Filament\Resources\Pages\CreateRecord;
@@ -13,30 +14,74 @@ class CreatePenduduk extends CreateRecord
 {
     protected static string $resource = PendudukResource::class;
 
+    public function mount(): void
+    {
+        parent::mount();
+
+        // Siapkan array untuk menampung semua data yang akan diisi otomatis
+        $formData = [];
+
+        // Ambil data alamat dari tenant (sama seperti di default() pada Resource)
+        $tenant = Filament::getTenant();
+        if ($tenant && $tenant->profilDesa) {
+            $formData['desa_kelurahan'] = $tenant->profilDesa->nama_desa;
+            $formData['kecamatan'] = $tenant->profilDesa->kecamatan;
+            $formData['kabupaten'] = $tenant->profilDesa->kabupaten;
+            $formData['provinsi'] = $tenant->profilDesa->provinsi;
+        }
+
+        // Cek apakah ada parameter 'kk' di URL dan tambahkan ke data form
+        if (request()->has('kk')) {
+            $formData['kk'] = request()->query('kk');
+        }
+
+        // Isi form dengan semua data yang sudah kita kumpulkan
+        $this->form->fill($formData);
+    }
+
      protected function mutateFormDataBeforeCreate(array $data): array
     {
-        // PENTING: Menambahkan company_id dari tenant yang aktif
-        $data['company_id'] = Filament::getTenant()->id;
+       // 1. Dapatkan tenant (desa/company) yang sedang aktif
+        $tenant = Filament::getTenant();
+        if ($tenant) {
+            $data['company_id'] = $tenant->id;
 
+            // 2. Cari profil desa yang berelasi dengan tenant
+            $profilDesa = ProfilDesa::where('company_id', $tenant->id)->first();
+
+            // 3. Jika profil desa ditemukan, tambahkan id-nya ke data yang akan disimpan
+            if ($profilDesa) {
+                $data['desa_id'] = $profilDesa->id;
+            }
+        }
         return $data;
     }
     protected function afterCreate(): void
     {
         $record = $this->record;
+        // Kita perlu mendapatkan nilai KK mentah dari form data karena $record->kk akan terdekripsi
+        $plainKk = $this->form->getState()['kk']; 
+        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+        if (!$pepperKey) {
+            // Handle error jika pepper key tidak ada
+            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
+            return;
+        }
+        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
 
         if ($record->kepala_keluarga) {
             // Ini kepala keluarga, atur self-reference
             $record->kepala_keluarga_id = $record->id;
             $record->save();
 
-            // Cari dan update semua anggota dengan nomor KK yang sama
-            Penduduk::where('kk', $record->kk)
+            // Cari dan update semua anggota dengan nomor KK yang sama menggunakan HASH
+            Penduduk::where('kk_search_hash', $kkSearchHash)
                 ->where('id', '!=', $record->id)
                 ->whereNull('kepala_keluarga_id')
                 ->update(['kepala_keluarga_id' => $record->id]);
         } else {
-            // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama
-            $kepalaKeluarga = Penduduk::where('kk', $record->kk)
+            // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama menggunakan HASH
+            $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
                 ->where('kepala_keluarga', true)
                 ->first();
 

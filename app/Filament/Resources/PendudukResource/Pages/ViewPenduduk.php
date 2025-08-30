@@ -8,6 +8,8 @@ use Filament\Resources\Pages\ViewRecord;
 use Filament\Actions;
 use Filament\Infolists\Components;
 use Filament\Infolists\Infolist;
+use Carbon\Carbon;
+use Filament\Facades\Filament;
 
 class ViewPenduduk extends ViewRecord
 {
@@ -15,17 +17,35 @@ class ViewPenduduk extends ViewRecord
 
     public function infolist(Infolist $infolist): Infolist
     {
-        // Mendapatkan data anggota keluarga lainnya
-        $anggotaKeluarga = Penduduk::where('kk', $this->record->kk)
-            ->where('id', '!=', $this->record->id)
-            ->orderBy('kepala_keluarga', 'desc')
-            ->orderBy('tanggal_lahir')
-            ->get();
+        // Dapatkan KK mentah dari record yang sudah didekripsi oleh accessor di Model
+        $plainKk = $this->record->kk;
+        $anggotaKeluarga = collect(); // Default ke collection kosong
+        $kepalaKeluarga = null; // Default ke null
 
-        // Mendapatkan kepala keluarga
-        $kepalaKeluarga = Penduduk::where('kk', $this->record->kk)
-            ->where('kepala_keluarga', true)
-            ->first();
+        if ($plainKk) {
+            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+            if ($pepperKey) {
+                $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
+
+                // Mendapatkan data anggota keluarga lainnya menggunakan HASH
+                $queryResult = Penduduk::where('kk_search_hash', $kkSearchHash)
+                    ->where('id', '!=', $this->record->id)
+                    ->get();
+                
+                // Urutkan di collection karena tanggal_lahir dienkripsi
+                $anggotaKeluarga = $queryResult
+                    ->sortBy(function($penduduk) {
+                        return Carbon::parse($penduduk->tanggal_lahir);
+                    })
+                    ->sortByDesc('kepala_keluarga');
+
+
+                // Mendapatkan kepala keluarga menggunakan HASH
+                $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
+                    ->where('kepala_keluarga', true)
+                    ->first();
+            }
+        }
 
         return $infolist
             ->schema([
@@ -69,7 +89,13 @@ class ViewPenduduk extends ViewRecord
                                     ->copyable()
                                     ->icon('heroicon-o-document-text')
                                     ->copyMessageDuration(2000)
-                                    ->url(fn () => route('filament.admin.resources.kartu-keluargas.view', ['record' => $this->record->kk]))
+                                    ->url(function() {
+                                        $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
+                                        if ($kkRecord) {
+                                            return route('filament.admin.resources.kartu-keluargas.view', ['record' => $kkRecord->id]);
+                                        }
+                                        return null;
+                                    })
                                     ->openUrlInNewTab(),
 
                                 // Golongan darah dipindahkan ke sini
@@ -185,6 +211,7 @@ class ViewPenduduk extends ViewRecord
                             ->schema([
                                 Components\TextEntry::make('rt_rw')
                                     ->label('RT/RW')
+                                    ->state(fn (Penduduk $record): string => "{$record->rt}/{$record->rw}")
                                     ->icon('heroicon-o-home-modern'),
 
                                 Components\TextEntry::make('desa_kelurahan')
@@ -214,6 +241,7 @@ class ViewPenduduk extends ViewRecord
                             ->view('filament.resources.penduduk-resource.anggota-keluarga-table')
                             ->state([
                                 'anggota' => $anggotaKeluarga,
+                                'tenant' => Filament::getTenant(), // Menambahkan data tenant
                             ]),
                     ]),
 
@@ -239,7 +267,17 @@ class ViewPenduduk extends ViewRecord
 
             Actions\Action::make('lihat_kk')
                 ->label('Lihat Kartu Keluarga')
-                ->url(fn () => route('filament.admin.resources.kartu-keluargas.view', ['record' => $this->record->kk]))
+                ->url(function() {
+                    $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
+                    if ($kkRecord) {
+                        // Memastikan URL ke resource lain juga menyertakan tenant
+                        return \App\Filament\Resources\KartuKeluargaResource::getUrl('view', [
+                            'record' => $kkRecord->id,
+                            'tenant' => Filament::getTenant(),
+                        ]);
+                    }
+                    return null;
+                })
                 ->icon('heroicon-o-identification')
                 ->color('info'),
                 

@@ -10,16 +10,26 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Filament\Facades\Filament; // <-- DITAMBAHKAN
+use Filament\Facades\Filament;
+use Filament\Tables\Actions\ImportAction;
+use App\Filament\Imports\PendudukImporter;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Carbon\Carbon;
+use Closure;
 
 class PendudukResource extends Resource
 {
     protected static ?string $model = Penduduk::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
+    protected static ?string $tenantOwnershipRelationshipName = 'user';
     protected static ?string $navigationGroup = 'Kependudukan';
     protected static ?string $recordTitleAttribute = 'nama';
     protected static ?int $navigationSort = 1;
-
+    public static function getTenantRelationshipName(): string
+    {
+        return 'penduduks';
+    }
     public static function getNavigationLabel(): string
     {
         return 'Data Penduduk';
@@ -32,14 +42,20 @@ class PendudukResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return static::getModel()::count();
+
+        if ($tenant = Filament::getTenant()) {
+            return Penduduk::where('company_id', $tenant->id)->count();
+        }
+
+        return 0;
     }
+
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-            Forms\Components\Section::make('Informasi Identitas')
+                Forms\Components\Section::make('Informasi Identitas')
                     ->description('Data identitas dasar penduduk')
                     ->schema([
                         Forms\Components\Grid::make()
@@ -47,8 +63,29 @@ class PendudukResource extends Resource
                                 Forms\Components\TextInput::make('nik')
                                     ->label('NIK')
                                     ->required()
-                                    ->unique(ignoreRecord: true)
-                                    ->maxLength(16),
+                                    ->maxLength(16)
+                                    // --- PERBAIKAN VALIDASI ---
+                                    // Mengganti ->unique() dengan rule custom yang menggunakan hash
+                                    ->rule(function (?Model $record): Closure {
+                                        return function (string $attribute, $value, Closure $fail) use ($record) {
+                                            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                                            if (!$pepperKey) {
+                                                $fail('Terjadi kesalahan konfigurasi pada server.');
+                                                return;
+                                            }
+                                            $hashedNik = hash_hmac('sha256', $value, $pepperKey);
+                                            $query = Penduduk::where('nik_search_hash', $hashedNik);
+
+                                            if ($record) {
+                                                $query->where('id', '!=', $record->id);
+                                            }
+
+                                            if ($query->exists()) {
+                                                $fail('NIK sudah terdaftar di sistem.');
+                                            }
+                                        };
+                                    }),
+
                                 Forms\Components\TextInput::make('kk')
                                     ->label('Nomor KK')
                                     ->required()
@@ -111,7 +148,8 @@ class PendudukResource extends Resource
                                         'AB-' => 'AB-',
                                         'O+' => 'O+',
                                         'O-' => 'O-',
-                                        'Belum Diketahui' => 'Belum Diketahui',
+                                        '-' => '-',
+                                        'Tidak Tahu' => 'Tidak Tahu',
                                     ]),
                             ])
                             ->columns(3),
@@ -122,23 +160,51 @@ class PendudukResource extends Resource
                     ->schema([
                         Forms\Components\Grid::make()
                             ->schema([
-                                Forms\Components\TextInput::make('rt_rw')
-                                    ->label('RT/RW')
-                                    ->required()
-                                    ->maxLength(10)
-                                    ->placeholder('000/000'),
+                                Forms\Components\Grid::make(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('rt')
+                                            ->label('RT')
+                                            ->required()
+                                            ->maxLength(3)
+                                            ->placeholder('000'),
+                                        Forms\Components\TextInput::make('rw')
+                                            ->label('RW')
+                                            ->required()
+                                            ->maxLength(3)
+                                            ->placeholder('000'),
+                                    ]),
                                 Forms\Components\TextInput::make('desa_kelurahan')
                                     ->label('Desa/Kelurahan')
                                     ->required()
-                                    ->maxLength(100),
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->default(fn() => Filament::getTenant()?->profilDesa?->nama_desa),
+
+
                                 Forms\Components\TextInput::make('kecamatan')
                                     ->label('Kecamatan')
                                     ->required()
-                                    ->maxLength(100),
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->default(fn() => Filament::getTenant()?->profilDesa?->kecamatan),
+
+
                                 Forms\Components\TextInput::make('kabupaten')
                                     ->label('Kabupaten/Kota')
                                     ->required()
-                                    ->maxLength(100),
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->default(fn() => Filament::getTenant()?->profilDesa?->kabupaten),
+
+
+                                Forms\Components\TextInput::make('provinsi')
+                                    ->label('Provinsi')
+                                    ->required()
+                                    ->disabled()
+                                    ->dehydrated()
+                                    ->default(fn() => Filament::getTenant()?->profilDesa?->provinsi)
+                                    ->columnSpanFull(),
+
                                 Forms\Components\Textarea::make('alamat')
                                     ->label('Alamat Lengkap')
                                     ->required()
@@ -146,6 +212,7 @@ class PendudukResource extends Resource
                                     ->columnSpanFull(),
                             ])
                     ]),
+
 
                 // Status Keluarga - Full Width
                 Forms\Components\Section::make('Status Keluarga')
@@ -164,7 +231,7 @@ class PendudukResource extends Resource
                         Forms\Components\Placeholder::make('info_kk')
                             ->label('Informasi Kepala Keluarga')
                             ->content('Anggota keluarga akan otomatis terhubung dengan Kepala Keluarga dengan nomor KK yang sama.')
-                            ->visible(fn (Forms\Get $get) => $get('kepala_keluarga') === 0),
+                            ->visible(fn(Forms\Get $get) => $get('kepala_keluarga') === 0),
                     ]),
 
                 // Informasi Tambahan - Full Width, pindah ke bawah
@@ -187,10 +254,13 @@ class PendudukResource extends Resource
                                 Forms\Components\Select::make('pendidikan')
                                     ->options([
                                         'Tidak Sekolah' => 'Tidak Sekolah',
+                                        'Belum Sekolah' => 'Belum Sekolah',
                                         'SD/Sederajat' => 'SD/Sederajat',
                                         'SMP/Sederajat' => 'SMP/Sederajat',
-                                        'SMA/Sederajat' => 'SMA/Sederajat',
-                                        'D1/D2/D3' => 'D1/D2/D3',
+                                        'SMA/Sederaja' => 'SMA/Sederajat',
+                                        'D1' => 'D1',
+                                        'D2' => 'D2',
+                                        'D3' => 'D3',
                                         'D4/S1' => 'D4/S1',
                                         'S2' => 'S2',
                                         'S3' => 'S3',
@@ -203,7 +273,7 @@ class PendudukResource extends Resource
                                 Forms\Components\TextInput::make('no_hp')
                                     ->label('Nomor HP')
                                     ->tel()
-                                    ->telRegex('/^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\.\/0-9]*$/')
+                                    ->telRegex('/^(\+62|62|0)8[1-9][0-9]{6,11}$/')
                                     ->maxLength(20),
                                 Forms\Components\TextInput::make('email')
                                     ->label('Email')
@@ -218,22 +288,34 @@ class PendudukResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-        ->columns([
+            ->columns([
                 Tables\Columns\TextColumn::make('nik')
                     ->label('NIK')
-                    ->searchable(),
+                    // --- PERBAIKAN PENCARIAN ---
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        if (!$pepperKey) {
+                            return $query;
+                        }
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('nik_prefix_hash', $hashedSearch);
+                    }),
                 Tables\Columns\TextColumn::make('nama')
                     ->searchable()
-                    ->url(fn (Penduduk $record): string => route('filament.admin.resources.penduduks.view', ['record' => $record])),
+                    // ->url(fn (Penduduk $record): string => static::getUrl('view', ['record' => $record])),   // --- INI PERBAIKANNYA ---
+                    ->url(fn(Penduduk $record): string => static::getUrl('view', [
+                        'record' => $record,
+                        'tenant' => Filament::getTenant(),
+                    ])),
                 Tables\Columns\TextColumn::make('jenis_kelamin')
                     ->label('Jenis Kelamin')
-                    ->formatStateUsing(fn (string $state): string => match($state) {
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
                         'L' => 'Laki-laki',
                         'P' => 'Perempuan',
                         default => 'Tidak Diketahui',
                     })
                     ->badge()
-                    ->color(fn (string $state): string => match($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'L' => 'info',
                         'P' => 'danger',
                         default => 'gray',
@@ -244,7 +326,7 @@ class PendudukResource extends Resource
                 Tables\Columns\TextColumn::make('golongan_darah')
                     ->label('Gol. Darah')
                     ->badge()
-                    ->color(fn (string $state): string => match($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'A', 'A+', 'A-' => 'success',
                         'B', 'B+', 'B-' => 'info',
                         'AB', 'AB+', 'AB-' => 'warning',
@@ -256,17 +338,33 @@ class PendudukResource extends Resource
                     ->label('KK')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('alamat')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        if (!$pepperKey) return $query;
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('alamat_search_hash', $hashedSearch);
+                    })
                     ->limit(30),
-                Tables\Columns\TextColumn::make('rt_rw')
+                Tables\Columns\TextColumn::make('rt')
                     ->label('RT/RW')
-                    ->searchable(),
+                    ->formatStateUsing(fn($record) => $record->rt . '/' . $record->rw)
+                    ->searchable(['rt', 'rw']),
                 Tables\Columns\TextColumn::make('no_hp')
                     ->label('Nomor HP')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        if (!$pepperKey) return $query;
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('no_hp_search_hash', $hashedSearch);
+                    })
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('email')
-                    ->searchable()
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                        if (!$pepperKey) return $query;
+                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
+                        return $query->where('email_search_hash', $hashedSearch);
+                    })
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('desa_kelurahan')
                     ->label('Desa/Kelurahan')
@@ -318,6 +416,8 @@ class PendudukResource extends Resource
                         'AB-' => 'AB-',
                         'O+' => 'O+',
                         'O-' => 'O-',
+                        '-' => '-',
+                        'Tidak Tahu' => 'Tidak Tahu',
                     ]),
             ])
             ->headerActions([
@@ -344,7 +444,9 @@ class PendudukResource extends Resource
                                 'tanggal_lahir' => '1990-01-01',
                                 'golongan_darah' => 'O',
                                 'alamat' => 'Jl. Contoh No. 123',
-                                'rt_rw' => '001/002',
+                                'rt' => '001',
+                                'rw' => '002',
+                                'desa_kelurahan' => 'Sukamaju',
                                 'desa_kelurahan' => 'Sukamaju',
                                 'kecamatan' => 'Cianjur',
                                 'kabupaten' => 'Bandung',
@@ -365,7 +467,8 @@ class PendudukResource extends Resource
                                 'tanggal_lahir' => '1992-05-15',
                                 'golongan_darah' => 'A',
                                 'alamat' => 'Jl. Contoh No. 123',
-                                'rt_rw' => '001/002',
+                                'rt' => '001',
+                                'rw' => '002',
                                 'desa_kelurahan' => 'Sukamaju',
                                 'kecamatan' => 'Cianjur',
                                 'kabupaten' => 'Bandung',
@@ -515,7 +618,7 @@ class PendudukResource extends Resource
                                 ])
                                 ->default('semua')
                                 ->live()
-                                ->afterStateUpdated(function($state, callable $set) {
+                                ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state !== 'kustom') {
                                         $set('dari_tanggal', null);
                                         $set('sampai_tanggal', null);
@@ -526,11 +629,11 @@ class PendudukResource extends Resource
                                 ->schema([
                                     Forms\Components\DatePicker::make('dari_tanggal')
                                         ->label('Dari Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
 
                                     Forms\Components\DatePicker::make('sampai_tanggal')
                                         ->label('Sampai Tanggal')
-                                        ->visible(fn ($get) => $get('periode') === 'kustom'),
+                                        ->visible(fn($get) => $get('periode') === 'kustom'),
                                 ]),
 
                             Forms\Components\Radio::make('format')
@@ -550,28 +653,22 @@ class PendudukResource extends Resource
                             if ($data['periode'] === 'hari_ini') {
                                 $dariTanggal = Carbon::today()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'minggu_ini') {
+                            } elseif ($data['periode'] === 'minggu_ini') {
                                 $dariTanggal = Carbon::today()->startOfWeek()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfWeek()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_ini') {
+                            } elseif ($data['periode'] === 'bulan_ini') {
                                 $dariTanggal = Carbon::today()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_ini') {
+                            } elseif ($data['periode'] === 'tahun_ini') {
                                 $dariTanggal = Carbon::today()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'bulan_lalu') {
+                            } elseif ($data['periode'] === 'bulan_lalu') {
                                 $dariTanggal = Carbon::today()->subMonth()->startOfMonth()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subMonth()->endOfMonth()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'tahun_lalu') {
+                            } elseif ($data['periode'] === 'tahun_lalu') {
                                 $dariTanggal = Carbon::today()->subYear()->startOfYear()->format('Y-m-d');
                                 $sampaiTanggal = Carbon::today()->subYear()->endOfYear()->format('Y-m-d');
-                            }
-                            elseif ($data['periode'] === 'kustom') {
+                            } elseif ($data['periode'] === 'kustom') {
                                 $dariTanggal = isset($data['dari_tanggal']) ? $data['dari_tanggal']->format('Y-m-d') : null;
                                 $sampaiTanggal = isset($data['sampai_tanggal']) ? $data['sampai_tanggal']->format('Y-m-d') : null;
                             }
@@ -593,7 +690,7 @@ class PendudukResource extends Resource
                         }),
                 ]),
             ]);
-        }
+    }
     public static function getPages(): array
     {
         return [
@@ -606,13 +703,14 @@ class PendudukResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->where('company_id', Filament::getTenant()->id);
+
+        return Penduduk::query()->where('company_id', Filament::getTenant()->id);
     }
-        public static function getWidgets(): array
+
+    public static function getWidgets(): array
     {
         return [
             PendudukResource\Widgets\PendudukStats::class,
         ];
     }
 }
-
