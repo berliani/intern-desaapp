@@ -1,38 +1,99 @@
 <?php
 
-use Illuminate\Support\Facades\Password;
+use App\Models\User;
+use App\Mail\SendOtpMail;
+use Illuminate\Support\Facades\Mail;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
+use Twilio\Rest\Client as TwilioClient;
 
 new #[Layout('layouts.guest')] class extends Component
 {
+    public string $verificationMethod = 'email';
     public string $email = '';
+    public string $telepon = '';
 
-    /**
-     * Send a password reset link to the provided email address.
-     */
-    public function sendPasswordResetLink(): void
+    public function sendVerification(): void
     {
-        $this->validate([
-            'email' => ['required', 'string', 'email'],
-        ]);
+        if ($this->verificationMethod === 'email') {
+            $this->sendOtpByEmail();
+        } else {
+            $this->sendOtpByWhatsApp();
+        }
+    }
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $this->only('email')
-        );
+    private function sendOtpByEmail(): void
+    {
+        $validated = $this->validate(['email' => ['required', 'email']]);
+        $emailSearchHash = hash('sha256', strtolower($validated['email']));
+        $user = User::where('email_search_hash', $emailSearchHash)->first();
 
-        if ($status != Password::RESET_LINK_SENT) {
-            $this->addError('email', __($status));
-
+        if (!$user) {
+            $this->addError('email', __('passwords.user'));
             return;
         }
 
-        $this->reset('email');
+        $otpCode = random_int(100000, 999999);
+        Mail::to($user->email)->send(new SendOtpMail($otpCode, $user->company, 'reset'));
+        
+        $this->storeSessionAndRedirect($user, $otpCode);
+    }
 
-        session()->flash('status', __($status));
+    private function sendOtpByWhatsApp(): void
+    {
+        $validated = $this->validate(['telepon' => ['required', 'string', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
+        
+        $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
+        $teleponSearchHash = hash('sha256', $normalizedPhone);
+        $user = User::where('telepon_search_hash', $teleponSearchHash)->first();
+
+        if (!$user) {
+            $this->addError('telepon', 'Nomor WhatsApp tidak terdaftar.');
+            return;
+        }
+
+        $otpCode = random_int(100000, 999999);
+        
+        try {
+            $sid    = env('TWILIO_SID');
+            $token  = env('TWILIO_AUTH_TOKEN');
+            $from   = env('TWILIO_WHATSAPP_FROM');
+            $client = new TwilioClient($sid, $token);
+
+            $client->messages->create('whatsapp:+' . $normalizedPhone, [
+                "from" => $from,
+                "body" => "Kode reset password Anda adalah: {$otpCode}. Jangan berikan kode ini kepada siapapun."
+            ]);
+
+            $this->storeSessionAndRedirect($user, $otpCode);
+
+        } catch (\Twilio\Exceptions\TwilioException $e) {
+            $this->addError('telepon', 'Gagal mengirim kode OTP. Silakan coba lagi.');
+        }
+    }
+    
+    private function storeSessionAndRedirect(User $user, int $otpCode): void
+    {
+        session([
+            'password_reset_otp' => $otpCode,
+            'password_reset_user_id' => $user->id,
+            'password_reset_otp_expires_at' => now()->addMinutes(10)
+        ]);
+        
+        $this->redirect(route('password.reset', ['token' => 'otp-flow']), navigate: true);
+    }
+
+    private function normalizePhoneNumber(?string $phoneNumber): ?string
+    {
+        if (empty($phoneNumber)) return null;
+        $number = preg_replace('/[^0-9]/', '', $phoneNumber);
+        if (substr($number, 0, 1) === '0') {
+            return '62' . substr($number, 1);
+        }
+        if (substr($number, 0, 2) !== '62') {
+            return '62' . $number;
+        }
+        return $number;
     }
 }; ?>
 
@@ -43,22 +104,14 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="absolute -bottom-4 right-0 w-12 h-12 bg-emerald-100 rounded-full opacity-30"></div>
 
         <div class="relative">
-            <!-- Modern Badge with Recovery Icon -->
             <div class="flex items-center gap-2 mb-3">
                 <div class="flex items-center bg-gradient-to-r from-emerald-600 to-emerald-400 text-white text-xs font-medium py-1 px-3 rounded-full shadow-sm">
-                    <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path>
-                    </svg>
+                    <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"></path></svg>
                     <span>Portal Desa Digital</span>
                 </div>
-
-                <!-- Responsive additions for larger screens -->
                 <div class="hidden sm:block bg-gray-100 h-px flex-grow mx-2"></div>
                 <div class="hidden sm:flex gap-1 text-xs text-gray-500">
-                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-                    </svg>
+                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path></svg>
                     <span>Lupa Password</span>
                 </div>
             </div>
@@ -67,61 +120,51 @@ new #[Layout('layouts.guest')] class extends Component
                 Lupa Password?
             </h2>
             <p class="text-gray-600 mt-2 flex items-center">
-                <svg class="w-4 h-4 mr-1 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
-                </svg>
-                Dapatkan link reset password ke email Anda
+                <svg class="w-4 h-4 mr-1 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                Pilih metode untuk mendapatkan kode verifikasi (OTP)
             </p>
         </div>
     </div>
 
-    <!-- Session Status -->
     <x-auth-session-status class="mb-4 p-4 text-sm rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200" :status="session('status')" />
 
-    <form wire:submit="sendPasswordResetLink" class="space-y-4">
-        <!-- Email Address -->
+    <form wire:submit="sendVerification" class="space-y-4">
         <div>
-            <x-input-label for="email" :value="__('Email')" class="text-gray-700 font-medium mb-1 flex items-center">
-                <svg class="w-4 h-4 mr-1 text-emerald-600" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-                </svg>
-                Email
-            </x-input-label>
-            <div class="relative">
-                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
-                    </svg>
-                </div>
-                <x-text-input
-                    wire:model="email"
-                    id="email"
-                    class="block w-full pl-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
-                    type="email"
-                    name="email"
-                    required
-                    autofocus
-                    placeholder="nama@email.com"
-                />
+            <x-input-label>Metode Verifikasi <span class="text-red-500">*</span></x-input-label>
+            <div class="flex gap-4 mt-1">
+                <label class="flex items-center">
+                    <input type="radio" wire:model.live="verificationMethod" value="email" name="verification_method" class="form-radio text-emerald-600">
+                    <span class="ml-2 text-sm text-gray-700">Email</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" wire:model.live="verificationMethod" value="whatsapp" name="verification_method" class="form-radio text-emerald-600">
+                    <span class="ml-2 text-sm text-gray-700">WhatsApp</span>
+                </label>
             </div>
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
+
+        @if ($verificationMethod === 'email')
+            <div>
+                <x-input-label for="email">Email <span class="text-red-500">*</span></x-input-label>
+                <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" name="email" required autofocus placeholder="nama@email.com" />
+                <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            </div>
+        @else
+            <div>
+                <x-input-label for="telepon">Nomor WhatsApp <span class="text-red-500">*</span></x-input-label>
+                <x-text-input wire:model="telepon" id="telepon" class="block mt-1 w-full" type="tel" name="telepon" required autofocus placeholder="08xxxxxxxxxx" />
+                <x-input-error :messages="$errors->get('telepon')" class="mt-2" />
+            </div>
+        @endif
 
         <div class="flex items-center justify-between pt-2">
             <a class="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center" href="{{ route('login') }}" wire:navigate>
-                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path>
-                </svg>
+                <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd"></path></svg>
                 {{ __('Kembali ke Login') }}
             </a>
 
-            <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
-                <svg class="w-5 h-5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"></path>
-                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"></path>
-                </svg>
-                {{ __('Kirim Link') }}
+            <button type="submit" class="inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700">
+                {{ __('Kirim Kode OTP') }}
             </button>
         </div>
     </form>

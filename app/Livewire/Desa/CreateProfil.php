@@ -22,7 +22,6 @@ class CreateProfil extends Component
 {
     use WithFileUploads;
 
-    // Properti Laravolt
     public $provinces;
     public $cities = [];
     public $districts = [];
@@ -32,7 +31,6 @@ class CreateProfil extends Component
     public $selectedDistrict = null;
     public $selectedVillage = null;
 
-    // Properti untuk menampung input 'Lainnya'
     public string $newProvinceName = '';
     public string $newProvinceCode = '';
     public string $newCityName = '';
@@ -42,7 +40,6 @@ class CreateProfil extends Component
     public string $newVillageName = '';
     public string $newVillageCode = '';
 
-    // Properti form
     public string $nama_desa = '';
     public string $subdomain = '';
     public string $kode_pos = '';
@@ -68,6 +65,10 @@ class CreateProfil extends Component
 
         if ($this->profil) {
             $this->fill($this->profil->toArray());
+
+            $this->telepon = $this->profil->telepon;
+            $this->email = $this->profil->email;
+            
             $this->existingLogo = $this->profil->logo;
             $this->existingThumbnails = $this->profil->thumbnails;
 
@@ -144,7 +145,6 @@ class CreateProfil extends Component
     #[Computed]
     public function isLocationSelectionComplete(): bool
     {
-        // Cek Provinsi
         if (empty($this->selectedProvince)) return false;
         if ($this->selectedProvince === 'lainnya') {
             return filled($this->newProvinceName) && filled($this->newProvinceCode) && !$this->getErrorBag()->hasAny(['newProvinceName', 'newProvinceCode'])
@@ -152,56 +152,28 @@ class CreateProfil extends Component
                 && filled($this->newDistrictName) && filled($this->newDistrictCode) && !$this->getErrorBag()->hasAny(['newDistrictName', 'newDistrictCode'])
                 && filled($this->newVillageName) && filled($this->newVillageCode) && !$this->getErrorBag()->hasAny(['newVillageName', 'newVillageCode']);
         }
-
-        // Cek Kabupaten/Kota
         if (empty($this->selectedCity)) return false;
         if ($this->selectedCity === 'lainnya') {
             return filled($this->newCityName) && filled($this->newCityCode) && !$this->getErrorBag()->hasAny(['newCityName', 'newCityCode'])
                 && filled($this->newDistrictName) && filled($this->newDistrictCode) && !$this->getErrorBag()->hasAny(['newDistrictName', 'newDistrictCode'])
                 && filled($this->newVillageName) && filled($this->newVillageCode) && !$this->getErrorBag()->hasAny(['newVillageName', 'newVillageCode']);
         }
-
-        // Cek Kecamatan
         if (empty($this->selectedDistrict)) return false;
         if ($this->selectedDistrict === 'lainnya') {
             return filled($this->newDistrictName) && filled($this->newDistrictCode) && !$this->getErrorBag()->hasAny(['newDistrictName', 'newDistrictCode'])
                 && filled($this->newVillageName) && filled($this->newVillageCode) && !$this->getErrorBag()->hasAny(['newVillageName', 'newVillageCode']);
         }
-
-        // Cek Desa/Kelurahan
         if (empty($this->selectedVillage)) return false;
         if ($this->selectedVillage === 'lainnya') {
             return filled($this->newVillageName) && filled($this->newVillageCode) && !$this->getErrorBag()->hasAny(['newVillageName', 'newVillageCode']);
         }
-
         return true;
     }
 
-    public function updatedNamaDesa($value)
-    {
-        $this->subdomain = Str::slug($value);
-        $domain = config('app.domain', 'desa.local');
-        $this->website = "http://{$this->subdomain}.{$domain}";
-    }
-
-    public function updatedSelectedProvince($provinceId)
-    {
-        $this->cities = ($provinceId && $provinceId !== 'lainnya') ? City::where('province_code', $provinceId)->get() : collect();
-        $this->reset(['selectedCity', 'selectedDistrict', 'selectedVillage', 'districts', 'villages']);
-    }
-
-    public function updatedSelectedCity($cityId)
-    {
-        $this->districts = ($cityId && $cityId !== 'lainnya') ? District::where('city_code', $cityId)->get() : collect();
-        $this->reset(['selectedDistrict', 'selectedVillage', 'villages']);
-    }
-
-    public function updatedSelectedDistrict($districtId)
-    {
-        $this->villages = ($districtId && $districtId !== 'lainnya') ? Village::where('district_code', $districtId)->get() : collect();
-        $this->reset('selectedVillage');
-    }
-
+    public function updatedNamaDesa($value) { $this->subdomain = Str::slug($value); $domain = config('app.domain', 'desa.local'); $this->website = "http://{$this->subdomain}.{$domain}"; }
+    public function updatedSelectedProvince($provinceId) { $this->cities = ($provinceId && $provinceId !== 'lainnya') ? City::where('province_code', $provinceId)->get() : collect(); $this->reset(['selectedCity', 'selectedDistrict', 'selectedVillage', 'districts', 'villages']); }
+    public function updatedSelectedCity($cityId) { $this->districts = ($cityId && $cityId !== 'lainnya') ? District::where('city_code', $cityId)->get() : collect(); $this->reset(['selectedDistrict', 'selectedVillage', 'villages']); }
+    public function updatedSelectedDistrict($districtId) { $this->villages = ($districtId && $districtId !== 'lainnya') ? Village::where('district_code', $districtId)->get() : collect(); $this->reset('selectedVillage'); }
     public function saveProfile()
     {
         if ($this->selectedProvince === 'lainnya' && !empty($this->newCityName)) {
@@ -218,7 +190,6 @@ class CreateProfil extends Component
         $validated = $this->validate();
 
         DB::transaction(function () use ($validated) {
-            // -- Handle Wilayah --
             $provinceCode = $this->selectedProvince;
             $provinceName = '';
             if ($provinceCode === 'lainnya') {
@@ -253,7 +224,6 @@ class CreateProfil extends Component
                 Village::create(['code' => $this->newVillageCode, 'name' => Str::upper($this->newVillageName), 'district_code' => $districtCode]);
             }
 
-            // -- Handle Company & Profil Desa --
             $company = Company::updateOrCreate(
                 ['id' => $this->user->company_id],
                 ['name' => $validated['nama_desa'], 'subdomain' => $validated['subdomain']]
@@ -263,12 +233,11 @@ class CreateProfil extends Component
                 $this->user->company_id = $company->id;
                 $this->user->save();
             }
-            
+   
             $profileData = $validated;
             $profileData['provinsi'] = $provinceName;
             $profileData['kabupaten'] = $cityName;
             $profileData['kecamatan'] = $districtName;
-            $profileData['nama_desa'] = $validated['nama_desa'];
             
             if (isset($validated['logo'])) $profileData['logo'] = $this->logo->store('logos', 'public');
             if (isset($validated['thumbnails'])) $profileData['thumbnails'] = $this->thumbnails->store('thumbnails', 'public');
@@ -279,7 +248,7 @@ class CreateProfil extends Component
 
             ProfilDesa::updateOrCreate(
                 ['company_id' => $company->id],
-                $profileData
+                $profileData 
             );
         });
 
