@@ -66,9 +66,35 @@ class VerifikasiData extends Component
             'alamat' => 'required|string|max:100',
             'rt' => 'required|string|max:3|digits:3',
             'rw' => 'required|string|max:3|digits:3',
+            'rt' => 'required|string|max:3|digits:3',
+            'rw' => 'required|string|max:3|digits:3',
             'tempat_lahir' => 'required|string|max:20',
             'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:L,P',
+            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
+            'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
+            'kepala_keluarga' => 'required|boolean',
+            'pekerjaan' => 'required|string|max:100',
+            'pendidikan' => 'required|in:Tidak Sekolah,Belum Sekolah,SD/Sederajat,SMP/Sederajat,SMA/Sederajat,D1,D2,D3,D4/S1,S2,S3',
+            'golongan_darah' => 'required|in:A+,A-,B+,B-,AB+,AB-,O+,O-,Tidak Tahu',
+        ];
+
+        if ($this->hasRegisteredWithEmail) {
+            $rules['email'] = 'required|email|max:100';
+        } else {
+            $rules['email'] = 'nullable|email|max:100';
+        }
+
+        if ($this->hasRegisteredWithPhone) {
+            $rules['no_hp'] = 'required|string|max:16';
+        } else {
+            $rules['no_hp'] = 'nullable|string|max:16';
+        }
+
+        return $rules;
+    }
+
+    public function submit()
             'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
             'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
             'kepala_keluarga' => 'required|boolean',
@@ -100,6 +126,7 @@ class VerifikasiData extends Component
 
         if (!$this->hasRegisteredWithEmail && !empty($validatedData['email'])) {
             $emailSearchHash = User::hashForSearch(strtolower($validatedData['email']));
+            $emailSearchHash = User::hashForSearch(strtolower($validatedData['email']));
             if (User::where('email_search_hash', $emailSearchHash)->where('id', '!=', $user->id)->exists()) {
                 $this->addError('email', 'Alamat email ini sudah digunakan oleh akun lain.');
                 return;
@@ -108,6 +135,7 @@ class VerifikasiData extends Component
 
         if (!$this->hasRegisteredWithPhone && !empty($validatedData['no_hp'])) {
             $normalizedPhone = $this->normalizePhoneNumber($validatedData['no_hp']);
+            $teleponSearchHash = User::hashForSearch($normalizedPhone);
             $teleponSearchHash = User::hashForSearch($normalizedPhone);
             if (User::where('telepon_search_hash', $teleponSearchHash)->where('id', '!=', $user->id)->exists()) {
                 $this->addError('no_hp', 'Nomor HP ini sudah digunakan oleh akun lain.');

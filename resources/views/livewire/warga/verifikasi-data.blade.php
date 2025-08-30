@@ -3,12 +3,14 @@
         <div class="flex items-center">
             <div class="flex-shrink-0 bg-gradient-to-r from-emerald-600 to-emerald-400 p-1.5 rounded-lg shadow-sm mr-3">
                 <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path fill-rule="evenodd" d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                    <path fill-rule="evenodd"
+                        d="M10 2a1 1 0 00-1 1v1a1 1 0 002 0V3a1 1 0 00-1-1zM4 4h3a3 3 0 006 0h3a2 2 0 012 2v9a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm2.5 7a1.5 1.5 0 100-3 1.5 1.5 0 000 3zm2.45 4a2.5 2.5 0 10-4.9 0h4.9zM12 9a1 1 0 100 2h3a1 1 0 100-2h-3zm-1 4a1 1 0 011-1h2a1 1 0 110 2h-2a1 1 0 01-1-1z"
+                        clip-rule="evenodd"></path>
                 </svg>
             </div>
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Verifikasi Data Kependudukan') }}
-        </h2>
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('Verifikasi Data Kependudukan') }}
+            </h2>
         </div>
     </x-slot>
 
@@ -40,6 +42,15 @@
                 </div>
             </div>
             @else
+            <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
+                <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
+                    <div class="p-2 bg-emerald-100 rounded-lg text-emerald-700">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-800">Formulir Verifikasi Data</h3>
+                </div>
             <div class="bg-white shadow-lg rounded-xl p-6 border border-gray-100">
                 <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4">
                     <div class="p-2 bg-emerald-100 rounded-lg text-emerald-700">
@@ -165,14 +176,19 @@
                             <x-input-label for="pendidikan">Pendidikan Terakhir <span class="text-red-500">*</span></x-input-label>
                             <select wire:model="pendidikan" id="pendidikan" class="block w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
                                 <option value="">Pilih Pendidikan</option>
+                                <option value="">Pilih Pendidikan</option>
                                 <option value="Tidak Sekolah">Tidak Sekolah</option>
                                 <option value="Belum Sekolah">Belum Sekolah</option>
+                                <option value="SD/Sederajat">SD/Sederajat</option>
+                                <option value="SMP/Sederajat">SMP/Sederajat</option>
+                                <option value="SMA/Sederajat">SMA/Sederajat</option>
                                 <option value="SD/Sederajat">SD/Sederajat</option>
                                 <option value="SMP/Sederajat">SMP/Sederajat</option>
                                 <option value="SMA/Sederajat">SMA/Sederajat</option>
                                 <option value="D1">D1</option>
                                 <option value="D2">D2</option>
                                 <option value="D3">D3</option>
+                                <option value="D4/S1">D4/S1</option>
                                 <option value="D4/S1">D4/S1</option>
                                 <option value="S2">S2</option>
                                 <option value="S3">S3</option>
@@ -190,6 +206,14 @@
                             <x-input-label for="golongan_darah">Golongan Darah <span class="text-red-500">*</span></x-input-label>
                             <select wire:model="golongan_darah" id="golongan_darah" class="block w-full border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm" required>
                                 <option value="">Pilih Gol. Darah</option>
+                                <option value="A+">A+</option>
+                                <option value="A-">A-</option>
+                                <option value="B+">B+</option>
+                                <option value="B-">B-</option>
+                                <option value="AB+">AB+</option>
+                                <option value="AB-">AB-</option>
+                                <option value="O+">O+</option>
+                                <option value="O-">O-</option>
                                 <option value="A+">A+</option>
                                 <option value="A-">A-</option>
                                 <option value="B+">B+</option>
