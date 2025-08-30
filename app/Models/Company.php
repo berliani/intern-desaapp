@@ -35,6 +35,7 @@ class Company extends Model implements HasName
      * Get the users that belong to the company.
      */
     public function users(): HasMany
+    public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
@@ -42,6 +43,7 @@ class Company extends Model implements HasName
     /**
      * Get the profile for the company.
      */
+    public function profilDesa(): HasOne
     public function profilDesa(): HasOne
     {
         // Pastikan foreign key 'company_id' di tabel 'profil_desa' sudah benar.

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
+use App\IMS\EnkripsiIMS;
 
 class ProfilDesa extends Model
 {
@@ -17,6 +18,7 @@ class ProfilDesa extends Model
     protected $table = 'profil_desa';
 
     protected $fillable = [
+        'company_id',
         'created_by',
         'nama_desa',
         'kecamatan',
@@ -26,6 +28,10 @@ class ProfilDesa extends Model
         'thumbnails',
         'logo',
         'alamat',
+        'telepon_encrypted',
+        'telepon_search_hash',
+        'email_encrypted',
+        'email_search_hash',
         'website',
         'visi',
         'misi',
@@ -47,7 +53,6 @@ class ProfilDesa extends Model
         'alamat_search_hash',
     ];
 
-    // Cast thumbnails sebagai array
     protected $casts = [
         'thumbnails' => 'array',
         'sejarah' => 'string',
@@ -190,7 +195,7 @@ class ProfilDesa extends Model
     {
         return $this->hasOne(StrukturPemerintahan::class, 'profil_desa_id');
     }
- public function company(): BelongsTo
+    public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
     }
@@ -202,7 +207,6 @@ class ProfilDesa extends Model
 
         return "Desa {$namaDesa}, Kecamatan {$kecamatan}, Kabupaten {$kabupaten}";
     }
-
 
     public function getKepadatanPenduduk(int $jumlahPenduduk = 0): ?float
     {
@@ -218,10 +222,8 @@ class ProfilDesa extends Model
             }
         }
 
-        // Konversi luas ke km²
         $luasKm2 = $batasWilayah->luas_wilayah / 1000000;
 
-        // Hitung kepadatan
         return round($jumlahPenduduk / $luasKm2, 2);
     }
 
@@ -239,5 +241,44 @@ class ProfilDesa extends Model
         $luasHa = number_format($this->luas_wilayah / 10000, 2, ',', '.');
 
         return "{$luasM2} m² ({$luasHa} ha)";
+    }
+
+    private static ?EnkripsiIMS $encryptorInstance = null;
+    private static function getEncryptor(): EnkripsiIMS
+    {
+        if (self::$encryptorInstance === null) {
+            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$key) {
+                throw new \Exception("Kunci enkripsi tidak valid.");
+            }
+            self::$encryptorInstance = new EnkripsiIMS($key);
+        }
+        return self::$encryptorInstance;
+    }
+
+    public function setTeleponAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['telepon_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['telepon_search_hash'] = hash('sha256', $value);
+        }
+    }
+    public function getTeleponAttribute()
+    {
+        $encrypted = $this->attributes['telepon_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setEmailAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt(strtolower($value));
+            $this->attributes['email_search_hash'] = hash('sha256', strtolower($value));
+        }
+    }
+    public function getEmailAttribute()
+    {
+        $encrypted = $this->attributes['email_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
     }
 }

@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\User;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -57,14 +59,11 @@ new #[Layout('layouts.guest')] class extends Component {
         $this->ensureIsNotRateLimited();
 
         $isEmail = filter_var($this->loginField, FILTER_VALIDATE_EMAIL);
-        $user = null;
 
-        if ($isEmail) {
-            $emailSearchHash = hash('sha256', strtolower($this->loginField));
-            $user = User::where('email_search_hash', $emailSearchHash)->first();
-        } else {
-            $user = User::where('username', $this->loginField)->first();
-        }
+        $credentials = [
+            $isEmail ? 'email' : 'username' => $this->loginField,
+            'password' => $this->password,
+        ];
 
         if (!$user || !Hash::check($this->password, $user->password)) {
             RateLimiter::hit($this->throttleKey());

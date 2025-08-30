@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
 use Carbon\Carbon;
+use Carbon\Carbon;
 
 class Penduduk extends Model
 {
@@ -19,6 +20,13 @@ class Penduduk extends Model
     protected $table = 'penduduk';
 
     protected $fillable = [
+        'company_id',
+        'id_desa',
+        'nik_encrypted',
+        'nik_search_hash',
+        'nik_prefix_hash',
+        'kk_encrypted',
+        'kk_search_hash',
         'nama',
         'alamat',
         'rt_rw',
@@ -31,6 +39,7 @@ class Penduduk extends Model
         'rt',
         'rw',
         'status_perkawinan',
+        'kepala_keluarga',
         'pekerjaan',
         'pendidikan',
         'desa_id',
@@ -223,7 +232,6 @@ class Penduduk extends Model
         };
     }
 
-    // Relasi-relasi tetap sama seperti sebelumnya
     public function desa(): BelongsTo
     {
         return $this->belongsTo(ProfilDesa::class, 'desa_id');

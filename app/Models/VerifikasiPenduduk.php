@@ -1,2 +1,184 @@
 <?php
-return sg_load('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');
+
+namespace App\Models;
+
+use App\IMS\EnkripsiIMS;
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class VerifikasiPenduduk extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $table = 'verifikasi_penduduk';
+
+    protected $fillable = [
+        'company_id',
+        'user_id',
+        'penduduk_id',
+        'desa_id',
+        'kepala_keluarga_id',
+        'nama',
+        'rt',
+        'rw',
+        'tempat_lahir',
+        'jenis_kelamin',
+        'agama',
+        'status_perkawinan',
+        'kepala_keluarga',
+        'pekerjaan',
+        'pendidikan',
+        'status',
+        'catatan',
+        'golongan_darah',
+        'nik',
+        'kk',
+        'alamat',
+        'tanggal_lahir',
+        'email',
+        'no_hp',
+    ];
+
+    protected $casts = [
+        'kepala_keluarga' => 'boolean',
+        'tanggal_lahir' => 'date',
+    ];
+
+    private static ?EnkripsiIMS $encryptorInstance = null;
+    private static ?string $pepperKey = null;
+
+    private static function getEncryptor(): EnkripsiIMS
+    {
+        if (self::$encryptorInstance === null) {
+            $encryptionKey = hex2bin(env('IMS_ENCRYPTION_KEY'));
+            if (!$encryptionKey) {
+                throw new \Exception("Kunci enkripsi IMS_ENCRYPTION_KEY tidak valid.");
+            }
+            self::$encryptorInstance = new EnkripsiIMS($encryptionKey);
+        }
+        return self::$encryptorInstance;
+    }
+
+    private static function getPepperKey(): string
+    {
+        if (self::$pepperKey === null) {
+            $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+            if (!$pepperKey) {
+                throw new \Exception("Pepper key IMS_PEPPER_KEY tidak valid.");
+            }
+            self::$pepperKey = $pepperKey;
+        }
+        return self::$pepperKey;
+    }
+
+    public static function hashForSearch(string $value): string
+    {
+        return hash_hmac('sha256', $value, self::getPepperKey());
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function penduduk(): BelongsTo
+    {
+        return $this->belongsTo(Penduduk::class);
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function desa(): BelongsTo
+    {
+        return $this->belongsTo(ProfilDesa::class, 'desa_id');
+    }
+
+    public function setNikAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['nik_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['nik_search_hash'] = self::hashForSearch($value);
+            if (strlen($value) >= 8) {
+                $this->attributes['nik_prefix_hash'] = self::hashForSearch(substr($value, 0, 8));
+            }
+        }
+    }
+    public function getNikAttribute()
+    {
+        $encrypted = $this->attributes['nik_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setKkAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['kk_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['kk_search_hash'] = self::hashForSearch($value);
+        }
+    }
+    public function getKkAttribute()
+    {
+        $encrypted = $this->attributes['kk_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setAlamatAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['alamat_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['alamat_search_hash'] = self::hashForSearch($value);
+        }
+    }
+    public function getAlamatAttribute()
+    {
+        $encrypted = $this->attributes['alamat_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setTanggalLahirAttribute($value)
+    {
+        if (!empty($value)) {
+            $date = Carbon::parse($value)->format('Y-m-d');
+            $this->attributes['tanggal_lahir_encrypted'] = self::getEncryptor()->encrypt($date);
+            $this->attributes['tanggal_lahir_search_hash'] = self::hashForSearch($date);
+        }
+    }
+    public function getTanggalLahirAttribute()
+    {
+        $encrypted = $this->attributes['tanggal_lahir_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setEmailAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt(strtolower($value));
+            $this->attributes['email_search_hash'] = self::hashForSearch(strtolower($value));
+        }
+    }
+    public function getEmailAttribute()
+    {
+        $encrypted = $this->attributes['email_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+
+    public function setNoHpAttribute($value)
+    {
+        if (!empty($value)) {
+            $this->attributes['no_hp_encrypted'] = self::getEncryptor()->encrypt($value);
+            $this->attributes['no_hp_search_hash'] = self::hashForSearch($value);
+        }
+    }
+    public function getNoHpAttribute()
+    {
+        $encrypted = $this->attributes['no_hp_encrypted'] ?? null;
+        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+    }
+}
+

@@ -14,44 +14,42 @@
     :class="{ 'py-1 shadow-md': scrolled }">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between items-center">
-            <!-- Logo -->
             <div class="flex items-center">
-                <a href="/" class="flex items-center transition-transform hover:-translate-y-0.5 duration-200">
-                    @if ($isSubdomain)
-                        @php
-                            $subdomain = explode('.', $host)[0];
-                            $company = \App\Models\Company::where('subdomain', $subdomain)->first();
-                        @endphp
-                        <div class="flex items-center">
-                            <span class="text-emerald-600 font-bold text-2xl mr-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </span>
-                            <div>
-                                <div class="text-emerald-600 font-bold text-xl">{{ $company->name ?? 'Desa Digital' }}
-                                </div>
-                                <div class="text-gray-500 text-xs font-medium hidden sm:block">Website Resmi Desa</div>
-                            </div>
-                        </div>
+                <a href="{{ route('home') }}" class="flex items-center transition-transform hover:-translate-y-0.5 duration-200">
+                    {{-- LOGIC CHECK FOR SUBDOMAIN --}}
+                    @if(request()->attributes->has('company'))
+                    @php
+                    $company = request()->attributes->get('company');
+                    $profilDesa = $company->profilDesa;
+                    @endphp
+                    @if($profilDesa && $profilDesa->logo)
+                    <img src="{{ Storage::url($profilDesa->logo) }}" alt="{{ $profilDesa->nama_desa }}" class="h-10 w-auto object-contain">
                     @else
-                        {{-- Tampilan Logo Global --}}
-                        <div class="flex items-center">
-                            <span class="text-emerald-600 font-bold text-2xl mr-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none"
-                                    viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                                </svg>
-                            </span>
-                            <div>
-                                <div class="text-emerald-600 font-bold text-xl">Desa Digital</div>
-                                <div class="text-gray-500 text-xs font-medium hidden sm:block">Platform Website Desa
-                                </div>
-                            </div>
+                    <div class="flex items-center">
+                        <span class="text-emerald-600 font-bold text-2xl mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </span>
+                        <div>
+                            <div class="text-emerald-600 font-bold text-xl">{{ $company->name }}</div>
+                            <div class="text-gray-500 text-xs font-medium hidden sm:block">Website Resmi Desa</div>
                         </div>
+                    </div>
+                    @endif
+                    @else
+                    {{-- Tampilan Logo Global --}}
+                    <div class="flex items-center">
+                        <span class="text-emerald-600 font-bold text-2xl mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                        </span>
+                        <div>
+                            <div class="text-emerald-600 font-bold text-xl">Desa Digital</div>
+                            <div class="text-gray-500 text-xs font-medium hidden sm:block">Platform Website Desa</div>
+                        </div>
+                    </div>
                     @endif
                 </a>
             </div>
@@ -125,14 +123,19 @@
                         </a>
                     @endif
                 </div>
+                @endif
             </div>
 
             <!-- Mobile menu button -->
             <div class="lg:hidden">
-                <button @click="toggleMobileMenu" class="...">
+                <button @click="toggleMobileMenu" class="inline-flex items-center justify-center p-2 rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-emerald-500 transition duration-150">
                     <span class="sr-only">Buka menu</span>
-                    <svg class="h-6 w-6" x-bind:class="{ 'hidden': mobileMenuOpen, 'block': !mobileMenuOpen }" ...></svg>
-                    <svg class="h-6 w-6" x-bind:class="{ 'block': mobileMenuOpen, 'hidden': !mobileMenuOpen }" ...></svg>
+                    <svg class="h-6 w-6" x-bind:class="{'hidden': mobileMenuOpen, 'block': !mobileMenuOpen}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg class="h-6 w-6" x-bind:class="{'block': mobileMenuOpen, 'hidden': !mobileMenuOpen}" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
                 </button>
             </div>
         </div>
@@ -141,25 +144,44 @@
     <!-- Mobile Navigation Menu -->
     <div class="lg:hidden fixed inset-x-0 z-40" x-show="mobileMenuOpen" x-transition x-cloak>
         <div class="pt-2 pb-3 space-y-1 bg-white border-t border-gray-200 mt-2 shadow-lg">
-            <!-- Menu item -->
+
             <div class="pt-4 pb-3 border-t border-gray-200 mt-2">
-                @if ($isSubdomain)
-                    {{-- TAMPILAN TOMBOL MOBILE UNTUK SUBDOMAIN --}}
-                    @auth
-                        {{-- Tampilan mobile saat login --}}
-                    @else
-                        <div class="grid grid-cols-1 gap-3 px-3 mt-3">
-                            <a href="{{ route('login') }}" class="...">Masuk</a>
-                            <a href="{{ route('register') }}" class="...">Daftar Warga</a>
-                        </div>
-                    @endauth
+                @if(request()->attributes->has('company'))
+                {{-- TAMPILAN TOMBOL MOBILE UNTUK SUBDOMAIN --}}
+                @auth
+                {{-- Tampilan mobile saat login --}}
                 @else
-                    {{-- TAMPILAN TOMBOL MOBILE UNTUK SITUS UTAMA (GLOBAL) --}}
-                    <div class="grid grid-cols-1 gap-3 px-3 mt-3">
-                        <a href="{{ route('login') }}" class="...">Masuk</a>
-                        {{-- <a href="{{ route('register') }}" class="...">Daftar Warga</a> --}}
-                        <a href="{{ route('register-desa') }}" class="...">Daftarkan Desa</a>
-                    </div>
+                <div class="grid grid-cols-1 gap-3 px-3 mt-3">
+                    <a href="{{ route('login') }}" class="flex justify-center items-center px-4 py-3 border-2 border-emerald-200 text-base font-medium rounded-lg text-emerald-600 bg-white hover:bg-emerald-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg> Masuk
+                    </a>
+                    {{-- FIX: Tombol Daftar Warga ditambahkan di sini --}}
+                    <a href="{{ route('register') }}" class="flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg> Daftar Warga
+                    </a>
+                </div>
+                @endauth
+                @else
+                {{-- TAMPILAN TOMBOL MOBILE UNTUK SITUS UTAMA (GLOBAL) --}}
+                <div class="grid grid-cols-1 gap-3 px-3 mt-3">
+                    <a href="{{ route('login') }}" class="flex justify-center items-center px-4 py-3 border-2 border-emerald-200 text-base font-medium rounded-lg text-emerald-600 bg-white hover:bg-emerald-50 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg> Masuk
+                    </a>
+                    <!-- <a href="{{ route('register') }}" class="flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" /></svg> Daftar Warga
+                        </a> -->
+                    <a href="{{ route('register-desa') }}" class="flex justify-center items-center px-4 py-3 border border-transparent shadow-sm text-base font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                        </svg> Daftarkan Desa
+                    </a>
+                </div>
                 @endif
             </div>
         </div>

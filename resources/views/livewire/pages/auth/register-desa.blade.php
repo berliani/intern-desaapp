@@ -56,7 +56,6 @@
                 <div class="mt-4">
                     @if ($verificationMethod === 'email')
                         <div>
-                            {{-- ✨ DIUBAH: Menggunakan properti 'email' --}}
                             <x-input-label for="email">
                                 Alamat Email <span class="text-red-500">*</span>
                             </x-input-label>
@@ -65,6 +64,17 @@
                         </div>
                     @endif
 
+                    @if($verificationMethod === 'whatsapp')
+                        <div>
+                            <x-input-label for="telepon">
+                                Nomor WhatsApp <span class="text-red-500">*</span>
+                            </x-input-label>
+                            <x-text-input wire:model="telepon" id="telepon" class="block mt-1 w-full" type="text"
+                                placeholder="Contoh: 081234567890" />
+                            <x-input-error :messages="$errors->get('telepon')" class="mt-2" />
+                        </div>
+                    @endif
+                </div>
                     @if ($verificationMethod === 'whatsapp')
                         <div>
                             <x-input-label for="telepon">
@@ -105,8 +115,8 @@
                     </div>
                     <button type="button" wire:click="generateCaptcha" title="Refresh Captcha"
                         class="p-2 text-gray-600 bg-white border rounded-md hover:bg-gray-50">
-                        <svg class="w-5 h-5" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
-                            fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.181-3.183m-4.991-2.695v-2.257a2.25 2.25 0 00-2.25-2.25H10.5a2.25 2.25 0 00-2.25 2.25v2.257m1.5-10.128l1.272 1.272M21 21l-1.272-1.272" />
                         </svg>
@@ -149,7 +159,6 @@
             class="p-4 border rounded-lg bg-gray-50 space-y-4 @if (!$otpVerified) opacity-50 pointer-events-none @endif">
             <legend class="text-lg font-semibold text-gray-800 px-2">2. Informasi Admin & Password</legend>
 
-            {{-- ✨ DITAMBAHKAN: Field untuk Nama Lengkap --}}
             <div>
                 <x-input-label for="name">
                     Nama Lengkap <span class="text-red-500">*</span>
@@ -158,7 +167,6 @@
                 <x-input-error :messages="$errors->get('name')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field untuk Username --}}
             <div>
                 <x-input-label for="username">
                     Username Admin <span class="text-red-500">*</span>
@@ -169,7 +177,6 @@
                 <x-input-error :messages="$errors->get('username')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field Password dengan Tombol Show/Hide --}}
             <div x-data="{ show: false }">
                 <x-input-label for="password">
                     Password <span class="text-red-500">*</span>
@@ -200,7 +207,6 @@
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
 
-            {{-- ✨ DIUBAH: Field Konfirmasi Password dengan Tombol Show/Hide --}}
             <div x-data="{ show: false }">
                 <x-input-label for="password_confirmation">
                     Konfirmasi Password <span class="text-red-500">*</span>
