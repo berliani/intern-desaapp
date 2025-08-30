@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Models\Company;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -13,16 +14,17 @@ class SendOtpMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $otp;
-
     /**
      * Create a new message instance.
      *
      * @return void
      */
-    public function __construct($otp)
-    {
-        $this->otp = $otp;
+    public function __construct(
+        public string $otp,
+        public ?Company $company = null,
+        public string $purpose = 'pendaftaran'
+    ){
+        
     }
 
     /**
@@ -32,8 +34,21 @@ class SendOtpMail extends Mailable
      */
     public function envelope()
     {
+       
+        $subject = 'Kode Verifikasi';
+
+        if ($this->purpose === 'reset') {
+            $subject = 'Kode OTP Reset Password';
+        } else {
+            $subject = 'Kode Verifikasi Pendaftaran Desa';
+            if ($this->company) {
+                $companyName = str_replace('Desa ', '', $this->company->name);
+                $subject = 'Kode Verifikasi Pendaftaran Akun Warga ' . $companyName;
+            }
+        }
+
         return new Envelope(
-            subject: 'Kode Verifikasi Pendaftaran Desa',
+            subject: $subject,
         );
     }
 

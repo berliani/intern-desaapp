@@ -17,6 +17,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Carbon\Carbon;
 use Closure;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\Grid;
+use Filament\Support\RawJs;
 
 class PendudukResource extends Resource
 {
@@ -64,6 +67,7 @@ class PendudukResource extends Resource
                                     ->label('NIK')
                                     ->required()
                                     ->maxLength(16)
+                              
                                     // --- PERBAIKAN VALIDASI ---
                                     // Mengganti ->unique() dengan rule custom yang menggunakan hash
                                     ->rule(function (?Model $record): Closure {
@@ -136,10 +140,6 @@ class PendudukResource extends Resource
                                 Forms\Components\Select::make('golongan_darah')
                                     ->label('Golongan Darah')
                                     ->options([
-                                        'A' => 'A',
-                                        'B' => 'B',
-                                        'AB' => 'AB',
-                                        'O' => 'O',
                                         'A+' => 'A+',
                                         'A-' => 'A-',
                                         'B+' => 'B+',
@@ -155,8 +155,7 @@ class PendudukResource extends Resource
                             ->columns(3),
                     ]),
 
-                // Alamat & Status - Full Width
-                Forms\Components\Section::make('Alamat & Status')
+      Section::make('Alamat & Status')
                     ->schema([
                         Forms\Components\Grid::make()
                             ->schema([
@@ -178,6 +177,25 @@ class PendudukResource extends Resource
                                     ->required()
                                     ->disabled()
                                     ->dehydrated()
+                        Grid::make(2)->schema([
+                            // --- PERUBAHAN DIMULAI DI SINI ---
+                            Forms\Components\Grid::make(2)->schema([
+                                Forms\Components\TextInput::make('rt')
+                                    ->label('RT')
+                                    ->mask('999')
+                                    ->placeholder('001')
+                                    ->required(),
+                                Forms\Components\TextInput::make('rw')
+                                    ->label('RW')
+                                    ->mask('999')
+                                    ->placeholder('001')
+                                    ->required(),
+                            ])->label('RT/RW'),
+
+                                Forms\Components\TextInput::make('desa_kelurahan')
+                                    ->label('Desa/Kelurahan')
+                                    ->required()
+                                    ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->nama_desa),
 
 
@@ -186,6 +204,7 @@ class PendudukResource extends Resource
                                     ->required()
                                     ->disabled()
                                     ->dehydrated()
+                                    ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->kecamatan),
 
 
@@ -194,6 +213,7 @@ class PendudukResource extends Resource
                                     ->required()
                                     ->disabled()
                                     ->dehydrated()
+                                    ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->kabupaten),
 
 
@@ -202,6 +222,7 @@ class PendudukResource extends Resource
                                     ->required()
                                     ->disabled()
                                     ->dehydrated()
+                                    ->readOnly()
                                     ->default(fn() => Filament::getTenant()?->profilDesa?->provinsi)
                                     ->columnSpanFull(),
 
@@ -258,6 +279,7 @@ class PendudukResource extends Resource
                                         'SD/Sederajat' => 'SD/Sederajat',
                                         'SMP/Sederajat' => 'SMP/Sederajat',
                                         'SMA/Sederaja' => 'SMA/Sederajat',
+                                        'SMA/Sederajat' => 'SMA/Sederajat',
                                         'D1' => 'D1',
                                         'D2' => 'D2',
                                         'D3' => 'D3',
@@ -404,10 +426,6 @@ class PendudukResource extends Resource
                 Tables\Filters\SelectFilter::make('golongan_darah')
                     ->label('Golongan Darah')
                     ->options([
-                        'A' => 'A',
-                        'B' => 'B',
-                        'AB' => 'AB',
-                        'O' => 'O',
                         'A+' => 'A+',
                         'A-' => 'A-',
                         'B+' => 'B+',

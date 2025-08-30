@@ -24,7 +24,7 @@ class ViewProfilDesa extends ViewRecord
                 ->label('Ubah Profil'),
             Actions\Action::make('lihatPeta')
                 ->label('G-Maps Desa')
-                ->url(fn ($record) => "https://www.google.com/maps/search/{$record->nama_desa}+{$record->kecamatan}+{$record->kabupaten}", true)
+                ->url(fn($record) => "https://www.google.com/maps/search/{$record->nama_desa}+{$record->kecamatan}+{$record->kabupaten}", true)
                 ->icon('heroicon-o-map')
                 ->color('warning'),
         ];
@@ -43,7 +43,7 @@ class ViewProfilDesa extends ViewRecord
                     ->schema([
                         Components\Grid::make()
                             ->schema([
-                                Components\ImageEntry::make('thumbnails')
+                                Components\ImageEntry::make('thumbnail')
                                     ->label('Thumbnail Desa')
                                     ->disk('public')
                                     ->height(300)
@@ -83,17 +83,14 @@ class ViewProfilDesa extends ViewRecord
                             ->state(function ($record) {
                                 // Start with the base address (which is decrypted by accessor)
                                 $address = $record->alamat;
-                                
                                 // Add the province if it exists
                                 if (!empty($record->provinsi)) {
                                     $address .= ', ' . $record->provinsi;
                                 }
-                                
                                 // Add the postal code if it exists
                                 if (!empty($record->kode_pos)) {
                                     $address .= ' ' . $record->kode_pos;
                                 }
-                                
                                 return $address;
                             })
                             ->icon('heroicon-o-map-pin')
@@ -109,7 +106,7 @@ class ViewProfilDesa extends ViewRecord
 
                         Components\TextEntry::make('website')
                             ->label('Website')
-                            ->url(fn ($state) => $state)
+                            ->url(fn($state) => $state)
                             ->openUrlInNewTab()
                             ->icon('heroicon-o-globe-alt'),
                     ])

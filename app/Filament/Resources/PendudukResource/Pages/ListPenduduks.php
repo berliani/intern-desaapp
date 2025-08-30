@@ -41,6 +41,7 @@ class ListPenduduks extends ListRecords
     protected function getTableRecordUrlUsing(): ?Closure
     {
         return fn (Model $record): string => static::getResource()::getUrl('view', [
+        return fn(Model $record): string => static::getResource()::getUrl('view', [
             'record' => $record,
             'tenant' => Filament::getTenant(),
         ]);
@@ -120,20 +121,20 @@ class ListPenduduks extends ListRecords
                             'tahun_lalu' => 'Tahun Lalu',
                             'kustom' => 'Kustom',
                         ])
-                        ->default(fn () => $this->filterPeriode)
+                        ->default(fn() => $this->filterPeriode)
                         ->live()
-                        ->afterStateUpdated(fn ($state, callable $set) =>
-                            $state === 'kustom' ?: $set('dariTanggal', null) & $set('sampaiTanggal', null)),
+                        ->afterStateUpdated(fn($state, callable $set) =>
+                        $state === 'kustom' ?: $set('dariTanggal', null) & $set('sampaiTanggal', null)),
 
                     DatePicker::make('dariTanggal')
                         ->label('Dari Tanggal')
-                        ->default(fn () => $this->dariTanggal)
-                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
+                        ->default(fn() => $this->dariTanggal)
+                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
 
                     DatePicker::make('sampaiTanggal')
                         ->label('Sampai Tanggal')
-                        ->default(fn () => $this->sampaiTanggal)
-                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
+                        ->default(fn() => $this->sampaiTanggal)
+                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
                 ])
                 ->action(function (array $data): void {
                     $this->applyPeriodeFilter($data['periode'], $data['dariTanggal'] ?? null, $data['sampaiTanggal'] ?? null);

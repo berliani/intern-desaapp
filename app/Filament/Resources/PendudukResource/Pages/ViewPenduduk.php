@@ -31,7 +31,7 @@ class ViewPenduduk extends ViewRecord
                 $queryResult = Penduduk::where('kk_search_hash', $kkSearchHash)
                     ->where('id', '!=', $this->record->id)
                     ->get();
-                
+              
                 // Urutkan di collection karena tanggal_lahir dienkripsi
                 $anggotaKeluarga = $queryResult
                     ->sortBy(function($penduduk) {
@@ -46,7 +46,7 @@ class ViewPenduduk extends ViewRecord
                     ->first();
             }
         }
-
+      
         return $infolist
             ->schema([
                 // Bagian informasi pribadi penduduk
@@ -207,16 +207,26 @@ class ViewPenduduk extends ViewRecord
                 Components\Section::make('Alamat')
                     ->icon('heroicon-o-home')
                     ->schema([
-                        Components\Grid::make(4)
+                        Components\Grid::make(5) // Grid dibagi 5 kolom
                             ->schema([
                                 Components\TextEntry::make('rt_rw')
                                     ->label('RT/RW')
                                     ->state(fn (Penduduk $record): string => "{$record->rt}/{$record->rw}")
                                     ->icon('heroicon-o-home-modern'),
+                                Components\TextEntry::make('rt')
+                                    ->label('RT')
+                                    ->icon('heroicon-o-home-modern')
+                                    ->columnSpan(1), // Ambil 1 kolom
+
+                                Components\TextEntry::make('rw')
+                                    ->label('RW')
+                                    ->icon('heroicon-o-home-modern')
+                                    ->columnSpan(1), // Ambil 1 kolom
 
                                 Components\TextEntry::make('desa_kelurahan')
                                     ->label('Desa/Kelurahan')
-                                    ->icon('heroicon-o-building-office-2'),
+                                    ->icon('heroicon-o-building-office-2')
+                                    ->columnSpan(3), // Ambil 3 kolom
 
                                 Components\TextEntry::make('kecamatan')
                                     ->icon('heroicon-o-building-office'),
@@ -275,12 +285,17 @@ class ViewPenduduk extends ViewRecord
                             'record' => $kkRecord->id,
                             'tenant' => Filament::getTenant(),
                         ]);
+
+                    // Perlu cari KartuKeluarga berdasarkan hash juga
+                    $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
+                    if ($kkRecord) {
+                        return route('filament.admin.resources.kartu-keluargas.view', ['record' => $kkRecord->id]);
                     }
                     return null;
                 })
                 ->icon('heroicon-o-identification')
                 ->color('info'),
-                
+
         ];
     }
 }

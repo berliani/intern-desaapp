@@ -20,6 +20,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Components\TextInput;
+use Filament\Facades\Filament;
 
 class ProfilDesaResource extends Resource
 {
@@ -43,6 +44,21 @@ class ProfilDesaResource extends Resource
     public static function getPluralLabel(): string
     {
         return 'Profil Desa';
+    }
+
+    public static function getNavigationBadge(): ?string
+    {
+
+        if ($tenant = Filament::getTenant()) {
+            return ProfilDesa::where('company_id', $tenant->id)->count();
+        }
+
+        return 0;
+    }
+
+        public static function getTenantRelationshipName(): string
+    {
+        return 'profildesas';
     }
 
     public static function form(Form $form): Form
@@ -218,6 +234,8 @@ class ProfilDesaResource extends Resource
                 // DITAMBAHKAN: Field tersembunyi untuk menyimpan data otomatis
                 Forms\Components\Hidden::make('company_id')->default(fn () => Auth::user()->company_id),
                 Forms\Components\Hidden::make('created_by')->default(fn () => Auth::id()),
+                Forms\Components\Hidden::make('company_id')->default(fn() => Auth::user()->company_id),
+                Forms\Components\Hidden::make('created_by')->default(fn() => Auth::id()),
             ]);
     }
 
@@ -234,8 +252,7 @@ class ProfilDesaResource extends Resource
                 ImageColumn::make('thumbnails')
                     ->label('Thumbnail')
                     ->disk('public')
-                    ->circular()
-                   ,
+                    ->circular(),
 
                 TextColumn::make('nama_desa')
                     ->label('Nama Desa')
@@ -262,7 +279,7 @@ class ProfilDesaResource extends Resource
                         $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
                         return $query->where('telepon_search_hash', $hashedSearch);
                     }),
-                
+
                 // Kolom email dengan fungsi pencarian enkripsi
                 TextColumn::make('email')
                     ->label('Email')
@@ -271,6 +288,7 @@ class ProfilDesaResource extends Resource
                         $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
                         return $query->where('email_search_hash', $hashedSearch);
                     }),
+
 
                 TextColumn::make('alamat')
                     ->label('Alamat')
@@ -298,6 +316,9 @@ class ProfilDesaResource extends Resource
                     ->visible(fn ($record) => $record->trashed()),
                 Tables\Actions\ForceDeleteAction::make()
                     ->visible(fn ($record) => $record->trashed()),
+                    ->visible(fn($record) => $record->trashed()),
+                Tables\Actions\ForceDeleteAction::make()
+                    ->visible(fn($record) => $record->trashed()),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -334,3 +355,8 @@ class ProfilDesaResource extends Resource
             ]);
     }
 }
+
+        return ProfilDesa::query()->where('company_id', Filament::getTenant()->id);
+    }
+}
+

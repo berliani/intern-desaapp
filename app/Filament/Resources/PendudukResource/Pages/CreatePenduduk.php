@@ -69,6 +69,18 @@ class CreatePenduduk extends CreateRecord
         }
         $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
 
+        // --- PERBAIKAN DIMULAI DI SINI ---
+        // Kita perlu mendapatkan nilai KK mentah dari form data karena $record->kk akan terdekripsi
+        $plainKk = $this->form->getState()['kk'];
+        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+        if (!$pepperKey) {
+            // Handle error jika pepper key tidak ada
+            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
+            return;
+        }
+        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
+        // --- AKHIR PERBAIKAN ---
+
         if ($record->kepala_keluarga) {
             // Ini kepala keluarga, atur self-reference
             $record->kepala_keluarga_id = $record->id;

@@ -38,7 +38,7 @@ class ViewKeuanganDesa extends ViewRecord
                 Infolists\Components\Section::make('Informasi Transaksi')
                     ->icon('heroicon-o-document-text')
                     ->schema([
-                        // Baris 1: Jenis transaksi, Deskripsi Transaksi, Tanggal transaksi
+                        
                         Infolists\Components\Grid::make(3)
                             ->schema([
                                 Infolists\Components\TextEntry::make('jenis')

@@ -65,12 +65,11 @@ class KeuanganStats extends BaseWidget
                 $this->sampaiTanggal = now()->subYear()->endOfYear()->toDateString();
                 break;
             default:
-                // Untuk kustom, tanggal akan ditetapkan secara manual
+
                 break;
         }
     }
 
-    // Menerima event filter dari KeuanganDesa page
     #[On('keuangan-filter-changed')]
     public function onFilterChanged(string $dari = '', string $sampai = ''): void
     {
@@ -91,12 +90,12 @@ class KeuanganStats extends BaseWidget
             $this->dariTanggal = $dari_tanggal;
             $this->sampaiTanggal = $sampai_tanggal;
         } else {
-            // Gunakan setPeriodeFilter untuk mengatur tanggal berdasarkan periode
+
             $this->setPeriodeFilter($periode);
         }
     }
 
-   protected function getStats(): array
+    protected function getStats(): array
     {
         $tenantId = Filament::getTenant()->id;
         $periodeText = $this->getPeriodeDisplayText();
@@ -167,7 +166,7 @@ class KeuanganStats extends BaseWidget
             return Carbon::parse($this->dariTanggal)->format('d/m/Y') . ' - ' . Carbon::parse($this->sampaiTanggal)->format('d/m/Y');
         }
 
-        return match($this->periode) {
+        return match ($this->periode) {
             'hari_ini' => 'Hari Ini',
             'minggu_ini' => 'Minggu Ini',
             'bulan_ini' => 'Bulan Ini',
@@ -186,14 +185,29 @@ class KeuanganStats extends BaseWidget
         $absValue = abs($number);
         $prefix = $isNegative ? '- ' : '';
 
-        if ($absValue >= 1000000000000) {
-            return $prefix . 'Rp ' . number_format($absValue / 1000000000000, 2, ',', '.') . ' T';
-        } elseif ($absValue >= 1000000000) {
-            return $prefix . 'Rp ' . number_format($absValue / 1000000000, 2, ',', '.') . ' M';
-        } elseif ($absValue >= 1000000) {
-            return $prefix . 'Rp ' . number_format($absValue / 1000000, 2, ',', '.') . ' Jt';
+        if ($absValue == 0) {
+            return 'Rp 0';
+        }
+
+        if ($absValue >= 1_000_000_000_000) {
+            $formatted = number_format($absValue / 1_000_000_000_000, 2, ',', '.');
+            $unit = ' T';
+        } elseif ($absValue >= 1_000_000_000) {
+            $formatted = number_format($absValue / 1_000_000_000, 2, ',', '.');
+            $unit = ' M';
+        } elseif ($absValue >= 1_000_000) {
+            $formatted = number_format($absValue / 1_000_000, 2, ',', '.');
+            $unit = ' Jt';
+        } elseif ($absValue >= 1_000) {
+            $formatted = number_format($absValue / 1_000, 2, ',', '.');
+            $unit = ' Rb';
         } else {
             return $prefix . 'Rp ' . number_format($absValue, 0, ',', '.');
         }
+
+        // Menghilangkan .00 atau .X0 di belakang koma
+        $cleaned = rtrim(rtrim($formatted, '0'), ',');
+
+        return $prefix . 'Rp ' . $cleaned . $unit;
     }
 }

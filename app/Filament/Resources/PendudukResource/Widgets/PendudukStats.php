@@ -220,64 +220,7 @@ class PendudukStats extends BaseWidget
             ];
         }
     }
-
-    // protected function hitungRtRw($query = null): array
-    // {
-    //     $result = [
-    //         'total_rt' => 0,
-    //         'total_rw' => 0,
-    //     ];
-
-    //     // Gunakan query yang diberikan atau buat query baru
-    //     if (!$query) {
-    //         $query = Penduduk::query();
-
-    //         // Terapkan filter tanggal jika ada dan bukan 'semua'
-    //         if ($this->dariTanggal && $this->sampaiTanggal && $this->periode !== 'semua') {
-    //             $startDateTime = Carbon::parse($this->dariTanggal)->startOfDay();
-    //             $endDateTime = Carbon::parse($this->sampaiTanggal)->endOfDay();
-
-    //             $query->whereBetween('created_at', [
-    //                 $startDateTime->toDateTimeString(),
-    //                 $endDateTime->toDateTimeString()
-    //             ]);
-    //         }
-    //     }
-
-    //     // Ambil semua data RT/RW yang tidak null
-    //     $rtRwList = (clone $query)->whereNotNull('rt_rw')
-    //                         ->where('rt_rw', '<>', '')
-    //                         ->pluck('rt_rw');
-
-    //     if ($rtRwList->isEmpty()) {
-    //         return $result;
-    //     }
-
-    //     // Array untuk menyimpan RT dan RW unik
-    //     $uniqueRt = [];
-    //     $uniqueRw = [];
-
-    //     // Proses data RT/RW
-    //     foreach ($rtRwList as $rtRw) {
-    //         // Pisahkan RT dan RW
-    //         $parts = explode('/', $rtRw);
-
-    //         if (count($parts) == 2) {
-    //             $rt = trim($parts[0]);
-    //             $rw = trim($parts[1]);
-
-    //             // Tambahkan ke array unik
-    //             $uniqueRt[$rt] = true;
-    //             $uniqueRw[$rw] = true;
-    //         }
-    //     }
-
-    //     $result['total_rt'] = count($uniqueRt);
-    //     $result['total_rw'] = count($uniqueRw);
-
-    //     return $result;
-    // }
-
+    
     protected function hitungRtRw($query): array
     {
         // Menghitung jumlah RT unik (distinct) yang tidak kosong
@@ -293,7 +236,13 @@ class PendudukStats extends BaseWidget
             ->where('rw', '<>', '')
             ->distinct()
             ->count('rw');
+      
+      protected function hitungRtRw($query = null): array
+    {
+        $baseQuery = $query ? clone $query : Penduduk::query();
 
+        $totalRt = $baseQuery->clone()->whereNotNull('rt')->distinct()->count('rt');
+        $totalRw = $baseQuery->clone()->whereNotNull('rw')->distinct()->count('rw');
         return [
             'total_rt' => $totalRt,
             'total_rw' => $totalRw,

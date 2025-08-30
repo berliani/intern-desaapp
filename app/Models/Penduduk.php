@@ -19,6 +19,8 @@ class Penduduk extends Model
     protected $table = 'penduduk';
 
     protected $fillable = [
+        'company_id',
+        'id_desa',
         'nama',
         'alamat',
         'rt',
@@ -29,7 +31,10 @@ class Penduduk extends Model
         'tempat_lahir',
         'jenis_kelamin',
         'agama',
+        'rt',
+        'rw',
         'status_perkawinan',
+        'kepala_keluarga',
         'pekerjaan',
         'pendidikan',
         'desa_id',
@@ -74,7 +79,8 @@ class Penduduk extends Model
         'jenis_kelamin' => 'string',
     ];
 
-        // --- BLOK KODE ENKRIPSI ---
+
+    // --- BLOK KODE ENKRIPSI ---
     private static ?EnkripsiIMS $encryptorInstance = null;
     private static ?string $pepperKey = null;
 
@@ -247,14 +253,13 @@ class Penduduk extends Model
     // Helper method untuk jenis kelamin
     public function getJenisKelaminLabelAttribute()
     {
-        return match($this->jenis_kelamin) {
+        return match ($this->jenis_kelamin) {
             'L' => 'Laki-laki',
             'P' => 'Perempuan',
             default => 'Tidak Diketahui'
         };
     }
 
-    // Relasi-relasi tetap sama seperti sebelumnya
     public function desa(): BelongsTo
     {
         return $this->belongsTo(ProfilDesa::class, 'desa_id');

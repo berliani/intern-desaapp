@@ -64,7 +64,7 @@ class KeuanganDesaFactory extends Factory
             $this->faker->numberBetween(500000, 30000000);
 
         return [
-            'id_desa' => ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::factory(),
             'created_by' => User::factory(),
             'jenis' => $jenis,
             'deskripsi' => $deskripsi,

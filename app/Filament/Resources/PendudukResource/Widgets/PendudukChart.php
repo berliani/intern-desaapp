@@ -74,7 +74,7 @@ class PendudukChart extends ChartWidget
                 $this->sampaiTanggal = null;
                 break;
             default:
-                // Untuk kustom, tanggal akan ditetapkan secara manual
+               
                 break;
         }
     }
@@ -108,7 +108,7 @@ class PendudukChart extends ChartWidget
         // Query dasar
         $tenantId = Filament::getTenant()->id;
 
-        
+
         $query = Penduduk::query()->where('company_id', $tenantId);
 
         // Terapkan filter tanggal jika ada dan bukan 'semua'

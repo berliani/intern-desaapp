@@ -78,7 +78,7 @@ class PengaduanFactory extends Factory
         }
 
         return [
-            'id_desa' => ProfilDesa::inRandomOrder()->first()?->id ?? ProfilDesa::factory(),
+            'desa_id' => ProfilDesa::inRandomOrder()->first()?->id ?? ProfilDesa::factory(),
             'penduduk_id' => Penduduk::inRandomOrder()->first()?->id ?? Penduduk::factory(),
             'judul' => $judul,
             'kategori' => $kategori,

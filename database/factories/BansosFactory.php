@@ -37,7 +37,7 @@ class BansosFactory extends Factory
             'notifikasi_terkirim' => $this->faker->boolean(80),
             'keterangan' => $this->faker->optional(0.5)->text(200),
             'alasan_pengajuan' => $this->faker->paragraph(1),
-            'id_desa' => $this->faker->randomElement([1, 2, 3]),
+            'desa_id' => $this->faker->randomElement([1, 2, 3]),
             'penduduk_id' => $this->faker->randomElement([1, 2, 3]),
             'jenis_bansos_id' => $this->faker->randomElement([1, 2, 3]),
         ];

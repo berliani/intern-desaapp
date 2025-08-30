@@ -28,10 +28,11 @@ class EditProfilDesa extends EditRecord
     {
         // Mengambil data 'telepon' yang sudah didekripsi melalui accessor di model
         $data['telepon'] = $this->record->telepon;
-        
+
         // Mengambil data 'email' yang sudah didekripsi melalui accessor di model
         $data['email'] = $this->record->email;
 
         return $data;
     }
+}
 }

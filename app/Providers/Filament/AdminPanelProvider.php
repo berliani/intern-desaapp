@@ -2,30 +2,26 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\SubdomainMiddleware;
+use App\Models\Company;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
+use Filament\Enums\ThemeMode;
 use Filament\Http\Middleware\Authenticate;
-use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages;
+use Filament\Navigation\MenuItem;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Spatie\Permission\Middleware\RoleMiddleware;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
-use Filament\Navigation\MenuItem;
-use Filament\Enums\ThemeMode;
-use Filament\Navigation\NavigationItem;
-use App\Models\Company;
-use App\Http\Middleware\SubdomainMiddleware;
-use App\Livewire\Auth\Login; // Pastikan path ini benar
-
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -35,7 +31,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->profile()
-            ->login(Login::class) // <-- Menggunakan komponen login kustom Anda
+            // ->login()
             ->defaultThemeMode(ThemeMode::Light)
             ->colors([
                 'primary' => Color::Emerald,
@@ -44,7 +40,7 @@ class AdminPanelProvider extends PanelProvider
                 'danger' => Color::Rose,
                 'info' => Color::Blue,
                 'gray' => Color::Gray,
-                'secondary' => Color::Indigo
+                'secondary' => Color::Indigo,
             ])
             ->navigationItems([
                 NavigationItem::make('Halaman Depan')
@@ -70,21 +66,22 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
-                RoleMiddleware::class.':super_admin|admin',
+                RoleMiddleware::class . ':super_admin|admin',
 
                 // Middleware subdomain diletakkan di sini, setelah otentikasi
                 SubdomainMiddleware::class,
             ])
             ->authMiddleware([
                 Authenticate::class,
+                RoleMiddleware::class . ':super_admin|admin',
             ])
             ->plugins([
-                FilamentShieldPlugin::make()
+                FilamentShieldPlugin::make(),
             ])
             ->userMenuItems([
                 'logout' => MenuItem::make()
-                                    ->label('Keluar')
-                                    ->postAction('/admin-logout-redirect'),
+                    ->label('Keluar')
+                    ->postAction('/admin-logout-redirect'),
             ])
             ->brandName('Desa Digital')
             ->navigationGroups([
@@ -96,12 +93,13 @@ class AdminPanelProvider extends PanelProvider
                 'Administrasi Sistem',
             ])
 
-            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'company')
+            ->tenant(Company::class, slugAttribute: 'subdomain', ownershipRelationship: 'users')
+            ->tenantDomain('{tenant:subdomain}.desa.local')
             ->tenantDomain('{tenant:subdomain}.desa.local')
 
             ->renderHook(
                 'panels::head.end',
-                fn () => '
+                fn() => '
                 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
                 <script>
                     window.chart = function(config) {
@@ -126,6 +124,31 @@ class AdminPanelProvider extends PanelProvider
                         };
                     };
                 </script>'
+                fn() => '
+                  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+                  <script>
+                       window.chart = function(config) {
+                           return {
+                               chart: null,
+                               init() {
+                                   setTimeout(() => {
+                                       const canvas = this.$refs.canvas;
+                                       if (canvas) {
+                                           try {
+                                               this.chart = new Chart(canvas.getContext("2d"), {
+                                                   type: config.type,
+                                                   data: config.cachedData,
+                                                   options: config.options
+                                               });
+                                           } catch(e) {
+                                               console.error("Error initializing chart:", e);
+                                           }
+                                       }
+                                   }, 100);
+                               }
+                           };
+                       };
+                  </script>'
             );
     }
 }
