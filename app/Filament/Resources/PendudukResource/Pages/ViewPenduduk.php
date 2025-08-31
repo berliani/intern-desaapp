@@ -10,6 +10,7 @@ use Filament\Infolists\Components;
 use Filament\Infolists\Infolist;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
+use Exception;
 
 class ViewPenduduk extends ViewRecord
 {
@@ -20,7 +21,6 @@ class ViewPenduduk extends ViewRecord
         // Dapatkan KK mentah dari record yang sudah didekripsi oleh accessor di Model
         $plainKk = $this->record->kk;
         $anggotaKeluarga = collect(); // Default ke collection kosong
-        $kepalaKeluarga = null; // Default ke null
 
         if ($plainKk) {
             $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
@@ -31,22 +31,23 @@ class ViewPenduduk extends ViewRecord
                 $queryResult = Penduduk::where('kk_search_hash', $kkSearchHash)
                     ->where('id', '!=', $this->record->id)
                     ->get();
-              
+                
                 // Urutkan di collection karena tanggal_lahir dienkripsi
                 $anggotaKeluarga = $queryResult
-                    ->sortBy(function($penduduk) {
-                        return Carbon::parse($penduduk->tanggal_lahir);
+                    ->sortBy(function ($penduduk) {
+                        try {
+                            // Coba parse tanggal lahir untuk sorting
+                            return Carbon::parse($penduduk->tanggal_lahir);
+                        } catch (Exception $e) {
+                            // Jika gagal parse (misalnya karena data tidak valid),
+                            // kembalikan tanggal yang sangat lampau agar tidak error dan item ini muncul di akhir.
+                            return Carbon::create(1, 1, 1);
+                        }
                     })
                     ->sortByDesc('kepala_keluarga');
-
-
-                // Mendapatkan kepala keluarga menggunakan HASH
-                $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
-                    ->where('kepala_keluarga', true)
-                    ->first();
             }
         }
-      
+    
         return $infolist
             ->schema([
                 // Bagian informasi pribadi penduduk
@@ -54,7 +55,6 @@ class ViewPenduduk extends ViewRecord
                     ->icon('heroicon-o-user-circle')
                     ->description('Data utama penduduk')
                     ->collapsible()
-                    ->extraAttributes(['class' => 'border border-gray-200 rounded-xl shadow-sm'])
                     ->schema([
                         // Nama dan status dalam keluarga di baris pertama
                         Components\Grid::make(3)
@@ -63,16 +63,15 @@ class ViewPenduduk extends ViewRecord
                                     ->size(Components\TextEntry\TextEntrySize::Large)
                                     ->weight(\Filament\Support\Enums\FontWeight::Bold)
                                     ->icon('heroicon-o-user')
-                                    ->extraAttributes(['class' => 'text-primary-600'])
-                                    ->columnSpan(1),
+                                    ->columnSpan(2),
 
                                 Components\TextEntry::make('status_dalam_keluarga')
-                                    ->label('Status dalam Keluarga')
+                                    ->label('Status')
                                     ->state(fn () => $this->record->kepala_keluarga ? 'Kepala Keluarga' : 'Anggota Keluarga')
                                     ->badge()
                                     ->color(fn () => $this->record->kepala_keluarga ? 'success' : 'info')
                                     ->icon('heroicon-o-user-group')
-                                    ->columnSpan(2),
+                                    ->columnSpan(1),
                             ]),
 
                         // NIK, Nomor KK, dan Golongan Darah di baris berikutnya
@@ -81,29 +80,18 @@ class ViewPenduduk extends ViewRecord
                                 Components\TextEntry::make('nik')
                                     ->label('NIK')
                                     ->copyable()
-                                    ->icon('heroicon-o-identification')
-                                    ->copyMessageDuration(2000),
+                                    ->icon('heroicon-o-identification'),
 
                                 Components\TextEntry::make('kk')
                                     ->label('Nomor KK')
                                     ->copyable()
-                                    ->icon('heroicon-o-document-text')
-                                    ->copyMessageDuration(2000)
-                                    ->url(function() {
-                                        $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
-                                        if ($kkRecord) {
-                                            return route('filament.admin.resources.kartu-keluargas.view', ['record' => $kkRecord->id]);
-                                        }
-                                        return null;
-                                    })
-                                    ->openUrlInNewTab(),
-
-                                // Golongan darah dipindahkan ke sini
+                                    ->icon('heroicon-o-document-text'),
+                                
                                 Components\TextEntry::make('golongan_darah')
                                     ->label('Golongan Darah')
                                     ->icon('heroicon-o-beaker')
                                     ->badge()
-                                    ->color(fn (string $state): string => match($state ?? '') {
+                                    ->color(fn (?string $state): string => match ($state ?? '') {
                                         'A', 'A+', 'A-' => 'success',
                                         'B', 'B+', 'B-' => 'info',
                                         'AB', 'AB+', 'AB-' => 'warning',
@@ -135,7 +123,6 @@ class ViewPenduduk extends ViewRecord
                     ->icon('heroicon-o-device-phone-mobile')
                     ->description('Kontak dan informasi komunikasi')
                     ->collapsible()
-                    ->extraAttributes(['class' => 'border border-gray-200 rounded-xl shadow-sm'])
                     ->schema([
                         Components\Grid::make(2)
                             ->schema([
@@ -143,7 +130,6 @@ class ViewPenduduk extends ViewRecord
                                     ->label('Nomor HP')
                                     ->icon('heroicon-o-phone')
                                     ->copyable()
-                                    ->copyMessageDuration(2000)
                                     ->url(fn ($state) => $state ? "tel:{$state}" : null)
                                     ->visible(fn ($state) => !empty($state)),
 
@@ -151,18 +137,9 @@ class ViewPenduduk extends ViewRecord
                                     ->label('Email')
                                     ->icon('heroicon-o-envelope')
                                     ->copyable()
-                                    ->copyMessageDuration(2000)
                                     ->url(fn ($state) => $state ? "mailto:{$state}" : null)
                                     ->visible(fn ($state) => !empty($state)),
                             ]),
-
-                        // Tampilkan pesan jika tidak ada kontak
-                        Components\TextEntry::make('no_kontak')
-                            ->label('')
-                            ->state('Tidak ada informasi kontak yang tersedia.')
-                            ->icon('heroicon-o-information-circle')
-                            ->visible(fn ($record) => empty($record->no_hp) && empty($record->email))
-                            ->columnSpanFull(),
                     ]),
 
                 // Card untuk Agama, Status Perkawinan, Pendidikan & Pekerjaan
@@ -170,9 +147,8 @@ class ViewPenduduk extends ViewRecord
                     ->icon('heroicon-o-clipboard-document-list')
                     ->description('Agama, status perkawinan, dan riwayat pendidikan')
                     ->collapsible()
-                    ->extraAttributes(['class' => 'border border-gray-200 rounded-xl shadow-sm'])
                     ->schema([
-                        Components\Grid::make(4)
+                        Components\Grid::make(2)
                             ->schema([
                                 Components\TextEntry::make('agama')
                                     ->label('Agama')
@@ -180,18 +156,16 @@ class ViewPenduduk extends ViewRecord
 
                                 Components\TextEntry::make('status_perkawinan')
                                     ->label('Status Perkawinan')
-                                    ->icon('heroicon-o-home-modern')
+                                    ->icon('heroicon-o-users')
                                     ->badge()
                                     ->color(fn (string $state): string =>
-                                        match(strtolower($state ?? '')) {
+                                        match (strtolower($state ?? '')) {
                                             'kawin' => 'success',
                                             'belum kawin' => 'gray',
                                             'cerai hidup' => 'warning',
                                             'cerai mati' => 'danger',
                                             default => 'gray'
-                                        }
-                                    ),
-
+                                        }),
                                 Components\TextEntry::make('pendidikan')
                                     ->label('Pendidikan')
                                     ->icon('heroicon-o-academic-cap'),
@@ -200,45 +174,25 @@ class ViewPenduduk extends ViewRecord
                                     ->label('Pekerjaan')
                                     ->icon('heroicon-o-briefcase'),
                             ]),
-                    ])
-                    ->columns(1),
+                    ]),
 
                 // Bagian alamat
                 Components\Section::make('Alamat')
                     ->icon('heroicon-o-home')
                     ->schema([
-                        Components\Grid::make(5) // Grid dibagi 5 kolom
-                            ->schema([
-                                Components\TextEntry::make('rt_rw')
-                                    ->label('RT/RW')
-                                    ->state(fn (Penduduk $record): string => "{$record->rt}/{$record->rw}")
-                                    ->icon('heroicon-o-home-modern'),
-                                Components\TextEntry::make('rt')
-                                    ->label('RT')
-                                    ->icon('heroicon-o-home-modern')
-                                    ->columnSpan(1), // Ambil 1 kolom
-
-                                Components\TextEntry::make('rw')
-                                    ->label('RW')
-                                    ->icon('heroicon-o-home-modern')
-                                    ->columnSpan(1), // Ambil 1 kolom
-
-                                Components\TextEntry::make('desa_kelurahan')
-                                    ->label('Desa/Kelurahan')
-                                    ->icon('heroicon-o-building-office-2')
-                                    ->columnSpan(3), // Ambil 3 kolom
-
-                                Components\TextEntry::make('kecamatan')
-                                    ->icon('heroicon-o-building-office'),
-
-                                Components\TextEntry::make('kabupaten')
-                                    ->icon('heroicon-o-building-library'),
-                            ]),
-
                         Components\TextEntry::make('alamat')
                             ->label('Alamat Lengkap')
                             ->icon('heroicon-o-map')
                             ->columnSpanFull(),
+                        Components\Grid::make(4)
+                            ->schema([
+                                Components\TextEntry::make('rt_rw')
+                                    ->label('RT/RW')
+                                    ->state(fn (Penduduk $record): string => "{$record->rt}/{$record->rw}"),
+                                Components\TextEntry::make('desa_kelurahan')->label('Desa/Kelurahan'),
+                                Components\TextEntry::make('kecamatan'),
+                                Components\TextEntry::make('kabupaten'),
+                            ]),
                     ]),
 
                 // Bagian anggota keluarga lainnya
@@ -254,17 +208,6 @@ class ViewPenduduk extends ViewRecord
                                 'tenant' => Filament::getTenant(), // Menambahkan data tenant
                             ]),
                     ]),
-
-                // Pesan jika tidak ada anggota keluarga lainnya
-                Components\Section::make('Anggota Keluarga Lainnya')
-                    ->icon('heroicon-o-user-group')
-                    ->visible(fn () => $anggotaKeluarga->isEmpty())
-                    ->schema([
-                        Components\TextEntry::make('no_anggota')
-                            ->label(false)
-                            ->state('Tidak ada anggota keluarga lainnya dalam KK ini.')
-                            ->columnSpanFull(),
-                    ]),
             ]);
     }
 
@@ -275,27 +218,23 @@ class ViewPenduduk extends ViewRecord
                 ->label('Ubah Data')
                 ->icon('heroicon-o-pencil-square'),
 
+            // <<< PERBAIKAN: Kode duplikat dan sintaks error dihapus.
             Actions\Action::make('lihat_kk')
                 ->label('Lihat Kartu Keluarga')
-                ->url(function() {
+                ->url(function () {
                     $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
                     if ($kkRecord) {
-                        // Memastikan URL ke resource lain juga menyertakan tenant
+                        // Menggunakan getUrl() untuk memastikan URL tenant-aware
                         return \App\Filament\Resources\KartuKeluargaResource::getUrl('view', [
                             'record' => $kkRecord->id,
                             'tenant' => Filament::getTenant(),
                         ]);
-
-                    // Perlu cari KartuKeluarga berdasarkan hash juga
-                    $kkRecord = \App\Models\KartuKeluarga::where('nomor_kk_search_hash', hash_hmac('sha256', $this->record->kk, hex2bin(env('IMS_PEPPER_KEY'))))->first();
-                    if ($kkRecord) {
-                        return route('filament.admin.resources.kartu-keluargas.view', ['record' => $kkRecord->id]);
                     }
                     return null;
                 })
                 ->icon('heroicon-o-identification')
-                ->color('info'),
-
+                ->color('info')
+                ->openUrlInNewTab(),
         ];
     }
 }

@@ -4,10 +4,13 @@ use App\Models\User;
 use App\Models\Penduduk;
 use App\Models\Company;
 use App\Mail\SendOtpMail;
+use App\Models\Company;
+use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
@@ -17,10 +20,14 @@ use Twilio\Rest\Client as TwilioClient;
 
 new #[Layout('layouts.guest')] class extends Component
 {
+    // Properti Form
     public string $name = '';
     public string $username = '';
     public string $nik = '';
+    public string $username = '';
+    public string $nik = '';
     public string $email = '';
+    public string $telepon = '';
     public string $telepon = '';
     public string $password = '';
     public string $password_confirmation = '';
@@ -73,6 +80,7 @@ new #[Layout('layouts.guest')] class extends Component
                     return;
                 }
                 $this->name = $penduduk->nama;
+                $this->nikFound = true;
                 $this->nikFound = true;
             }
         }
@@ -140,6 +148,11 @@ new #[Layout('layouts.guest')] class extends Component
             return;
         }
 
+        if (!$this->otpVerified) {
+            $this->addError('otp', 'Harap selesaikan verifikasi terlebih dahulu.');
+            return;
+        }
+
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
@@ -196,15 +209,21 @@ new #[Layout('layouts.guest')] class extends Component
         }
 
         $user = User::create($userData);
+        $user = User::create($userData);
 
+        $redirectTo = '';
         $redirectTo = '';
         if ($penduduk) {
             $user->assignRole('warga');
             $penduduk->update(['user_id' => $user->id]);
             session()->flash('status', 'Pendaftaran berhasil! Akun Anda sudah terverifikasi sebagai warga.');
             $redirectTo = '/dashboard';
+            $penduduk->update(['user_id' => $user->id]);
+            session()->flash('status', 'Pendaftaran berhasil! Akun Anda sudah terverifikasi sebagai warga.');
+            $redirectTo = '/dashboard';
         } else {
             $user->assignRole('unverified');
+            session()->flash('status', 'Pendaftaran berhasil! NIK Anda belum terdaftar, silakan lakukan verifikasi data.');
             session()->flash('status', 'Pendaftaran berhasil! NIK Anda belum terdaftar, silakan lakukan verifikasi data.');
             $redirectTo = '/verifikasi-data';
         }
@@ -279,16 +298,12 @@ new #[Layout('layouts.guest')] class extends Component
         <div class="relative">
             <div class="flex items-center gap-2 mb-3">
                 <div class="flex items-center bg-gradient-to-r from-emerald-600 to-emerald-400 text-white text-xs font-medium py-1 px-3 rounded-full shadow-sm">
-                    <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
-                    </svg>
+                    <svg class="w-3.5 h-3.5 mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path></svg>
                     <span>Portal Desa Digital</span>
                 </div>
                 <div class="hidden sm:block bg-gray-200 h-px flex-grow mx-2"></div>
                 <div class="hidden sm:flex gap-1 text-xs text-gray-500">
-                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
-                    </svg>
+                    <svg class="w-4 h-4 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
                     <span>Pendaftaran Akun</span>
                 </div>
             </div>
@@ -296,13 +311,13 @@ new #[Layout('layouts.guest')] class extends Component
                 Daftar Akun Baru
             </h2>
             <p class="text-gray-600 mt-2 flex items-center">
-                <svg class="w-4 h-4 mr-1 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"></path>
-                </svg>
+                <svg class="w-4 h-4 mr-1 text-emerald-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"></path></svg>
                 Lengkapi data untuk membuat akun
             </p>
         </div>
     </div>
+
+    <x-auth-session-status class="mb-4" :status="session('status')" />
 
     <x-auth-session-status class="mb-4" :status="session('status')" />
 
@@ -447,6 +462,35 @@ new #[Layout('layouts.guest')] class extends Component
                 </div>
                 <x-input-error :messages="$errors->get('password')" class="mt-2" />
             </div>
+                <div>
+                    <x-input-label for="username">Username <span class="text-red-500">*</span></x-input-label>
+                    <x-text-input wire:model="username" id="username" type="text" class="block mt-1 w-full" required placeholder="Buat username unik"/>
+                    <x-input-error :messages="$errors->get('username')" class="mt-2" />
+                </div>
+
+                <div>
+                    <x-input-label for="password">Password <span class="text-red-500">*</span></x-input-label>
+                    <div class="relative" x-data="{ showPassword: false }">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <x-text-input
+                            wire:model="password"
+                            id="password"
+                            class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+                            name="password"
+                            required
+                            autocomplete="new-password"
+                            placeholder="Minimal 8 karakter"
+                            x-bind:type="showPassword ? 'text' : 'password'"
+                        />
+                        <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none" @click="showPassword = !showPassword">
+                            <svg x-show="!showPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            <svg x-show="showPassword" class="h-5 w-5" style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                        </button>
+                    </div>
+                    <x-input-error :messages="$errors->get('password')" class="mt-2" />
+                </div>
 
             <div>
                 <x-input-label for="password_confirmation">Konfirmasi Password <span class="text-red-500">*</span></x-input-label>
@@ -485,6 +529,39 @@ new #[Layout('layouts.guest')] class extends Component
         </div>
         @endif
 
+        <div class="text-center mt-6">
+            <a class="text-sm font-medium text-emerald-600 hover:text-emerald-700" href="{{ route('login') }}" wire:navigate>
+                <div>
+                    <x-input-label for="password_confirmation">Konfirmasi Password <span class="text-red-500">*</span></x-input-label>
+                     <div class="relative" x-data="{ showConfirmPassword: false }">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                        </div>
+                        <x-text-input
+                            wire:model="password_confirmation"
+                            id="password_confirmation"
+                            class="block w-full pl-10 pr-10 py-2.5 border border-gray-300 rounded-lg shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+                            name="password_confirmation"
+                            required
+                            autocomplete="new-password"
+                            placeholder="Ulangi password"
+                            x-bind:type="showConfirmPassword ? 'text' : 'password'"
+                        />
+                        <button type="button" class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none" @click="showConfirmPassword = !showConfirmPassword">
+                            <svg x-show="!showConfirmPassword" class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            <svg x-show="showConfirmPassword" class="h-5 w-5" style="display: none;" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"></path></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end pt-2">
+                    <button type="submit" class="w-full justify-center inline-flex items-center px-4 py-2 bg-emerald-600 border border-transparent rounded-lg font-semibold text-xs text-white uppercase tracking-widest hover:bg-emerald-700 focus:bg-emerald-700 active:bg-emerald-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                        {{ __('Daftar') }}
+                    </button>
+                </div>
+            </div>
+        @endif
+        
         <div class="text-center mt-6">
             <a class="text-sm font-medium text-emerald-600 hover:text-emerald-700" href="{{ route('login') }}" wire:navigate>
                 {{ __('Sudah punya akun?') }}

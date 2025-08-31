@@ -23,7 +23,6 @@ class PendudukStats extends BaseWidget
 
     public function mount(): void
     {
-
         $this->setPeriodeFilter('semua');
     }
 
@@ -122,7 +121,7 @@ class PendudukStats extends BaseWidget
             return Carbon::parse($this->dariTanggal)->format('d/m/Y') . ' - ' . Carbon::parse($this->sampaiTanggal)->format('d/m/Y');
         }
 
-        return match($this->periode) {
+        return match ($this->periode) {
             'hari_ini' => 'Hari Ini',
             'minggu_ini' => 'Minggu Ini',
             'bulan_ini' => 'Bulan Ini',
@@ -139,7 +138,7 @@ class PendudukStats extends BaseWidget
         $tenantId = Filament::getTenant()->id;
         try {
             // Query dasar
-             $query = Penduduk::query()->where('company_id', $tenantId);
+            $query = Penduduk::query()->where('company_id', $tenantId);
 
             // Terapkan filter tanggal jika ada dan bukan 'semua'
             if ($this->dariTanggal && $this->sampaiTanggal && !in_array($this->periode, ['semua', 'semua_waktu'])) {
@@ -220,7 +219,7 @@ class PendudukStats extends BaseWidget
             ];
         }
     }
-    
+
     protected function hitungRtRw($query): array
     {
         // Menghitung jumlah RT unik (distinct) yang tidak kosong
@@ -236,13 +235,7 @@ class PendudukStats extends BaseWidget
             ->where('rw', '<>', '')
             ->distinct()
             ->count('rw');
-      
-      protected function hitungRtRw($query = null): array
-    {
-        $baseQuery = $query ? clone $query : Penduduk::query();
 
-        $totalRt = $baseQuery->clone()->whereNotNull('rt')->distinct()->count('rt');
-        $totalRw = $baseQuery->clone()->whereNotNull('rw')->distinct()->count('rw');
         return [
             'total_rt' => $totalRt,
             'total_rw' => $totalRw,

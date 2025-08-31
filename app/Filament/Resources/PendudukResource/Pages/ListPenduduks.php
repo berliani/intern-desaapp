@@ -4,55 +4,43 @@ namespace App\Filament\Resources\PendudukResource\Pages;
 
 use App\Filament\Resources\PendudukResource;
 use App\Filament\Resources\PendudukResource\Widgets\PendudukStats;
-use Filament\Actions;
-use Filament\Resources\Pages\ListRecords;
-use Filament\Forms\Components\DatePicker;
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Radio;
-use Carbon\Carbon;
-use Filament\Tables;
-use Illuminate\Database\Eloquent\Collection;
 use App\Models\Penduduk;
+use Carbon\Carbon;
+use Filament\Actions;
+use Filament\Facades\Filament;
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
+use Filament\Resources\Pages\ListRecords;
+use Filament\Tables\Actions\BulkAction;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Closure;
-use Filament\Facades\Filament;
 
 class ListPenduduks extends ListRecords
 {
     protected static string $resource = PendudukResource::class;
 
-    // Tambahkan properti untuk menyimpan filter
+    // Properti untuk menyimpan state filter
     public ?string $filterPeriode = 'semua';
     public ?string $dariTanggal = null;
     public ?string $sampaiTanggal = null;
 
-    // Inisialisasi tanggal default
+    // Inisialisasi tanggal default saat komponen dimuat
     public function mount(): void
     {
         parent::mount();
         $this->applyPeriodeFilter('semua');
     }
 
-    /**
-     * --- INI PERBAIKAN UTAMANYA ---
-     * Mengganti penggunaan route() dengan getUrl() untuk memastikan
-     * parameter 'tenant' disertakan secara otomatis.
-     */
-    protected function getTableRecordUrlUsing(): ?Closure
-    {
-        return fn (Model $record): string => static::getResource()::getUrl('view', [
-        return fn(Model $record): string => static::getResource()::getUrl('view', [
-            'record' => $record,
-            'tenant' => Filament::getTenant(),
-        ]);
-    }
-
-    // Method untuk menerapkan filter periode
+    // Method untuk menerapkan filter periode pada properti publik
     public function applyPeriodeFilter(string $periode, ?string $dariTanggal = null, ?string $sampaiTanggal = null): void
     {
         $this->filterPeriode = $periode;
 
-        // Setel filter berdasarkan periode yang dipilih
+        // Setel rentang tanggal berdasarkan periode yang dipilih
         switch ($periode) {
             case 'hari_ini':
                 $this->dariTanggal = Carbon::today()->format('Y-m-d');
@@ -82,14 +70,13 @@ class ListPenduduks extends ListRecords
                 $this->dariTanggal = $dariTanggal;
                 $this->sampaiTanggal = $sampaiTanggal;
                 break;
-            default:
-                // Semua data
+            default: // 'semua'
                 $this->dariTanggal = null;
                 $this->sampaiTanggal = null;
                 break;
         }
 
-        // Broadcast event ke semua widget
+        // Kirim event yang bisa didengarkan oleh widget untuk memperbarui data mereka
         $this->dispatch('global-filter-changed', [
             'periode' => $this->filterPeriode,
             'dariTanggal' => $this->dariTanggal,
@@ -104,7 +91,6 @@ class ListPenduduks extends ListRecords
                 ->label('Tambah Penduduk')
                 ->icon('heroicon-o-plus'),
 
-            // Filter periode
             Actions\Action::make('filterPeriode')
                 ->label('Filter Periode')
                 ->icon('heroicon-o-funnel')
@@ -121,59 +107,43 @@ class ListPenduduks extends ListRecords
                             'tahun_lalu' => 'Tahun Lalu',
                             'kustom' => 'Kustom',
                         ])
-                        ->default(fn() => $this->filterPeriode)
+                        ->default(fn () => $this->filterPeriode)
                         ->live()
-                        ->afterStateUpdated(fn($state, callable $set) =>
-                        $state === 'kustom' ?: $set('dariTanggal', null) & $set('sampaiTanggal', null)),
-
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if ($state !== 'kustom') {
+                                $set('dariTanggal', null);
+                                $set('sampaiTanggal', null);
+                            }
+                        }),
                     DatePicker::make('dariTanggal')
                         ->label('Dari Tanggal')
-                        ->default(fn() => $this->dariTanggal)
-                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
-
+                        ->default(fn () => $this->dariTanggal)
+                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
                     DatePicker::make('sampaiTanggal')
                         ->label('Sampai Tanggal')
-                        ->default(fn() => $this->sampaiTanggal)
-                        ->visible(fn(\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
+                        ->default(fn () => $this->sampaiTanggal)
+                        ->visible(fn (\Filament\Forms\Get $get) => $get('periode') === 'kustom'),
                 ])
                 ->action(function (array $data): void {
                     $this->applyPeriodeFilter($data['periode'], $data['dariTanggal'] ?? null, $data['sampaiTanggal'] ?? null);
                 }),
 
-            // Satu tombol Ekspor Data
             Actions\Action::make('exportPenduduk')
                 ->label('Ekspor Semua')
                 ->icon('heroicon-o-document-arrow-up')
                 ->color('success')
                 ->form([
-                    // Filter tambahan jika diperlukan
                     Select::make('jenis_kelamin')
                         ->label('Jenis Kelamin')
-                        ->options([
-                            '' => 'Semua',
-                            'L' => 'Laki-laki',
-                            'P' => 'Perempuan',
-                        ])
+                        ->options(['' => 'Semua', 'L' => 'Laki-laki', 'P' => 'Perempuan'])
                         ->default(''),
-
                     Select::make('status_perkawinan')
                         ->label('Status Perkawinan')
-                        ->options([
-                            '' => 'Semua',
-                            'Belum Kawin' => 'Belum Kawin',
-                            'Kawin' => 'Kawin',
-                            'Cerai Hidup' => 'Cerai Hidup',
-                            'Cerai Mati' => 'Cerai Mati',
-                        ])
+                        ->options(['' => 'Semua', 'Belum Kawin' => 'Belum Kawin', 'Kawin' => 'Kawin', 'Cerai Hidup' => 'Cerai Hidup', 'Cerai Mati' => 'Cerai Mati'])
                         ->default(''),
-
-                    // Pilihan format ekspor
                     Radio::make('format')
                         ->label('Format')
-                        ->options([
-                            'pdf' => 'PDF',
-                            'excel' => 'Excel',
-                        ])
+                        ->options(['pdf' => 'PDF', 'excel' => 'Excel'])
                         ->default('pdf')
                         ->required()
                         ->inline(),
@@ -203,19 +173,35 @@ class ListPenduduks extends ListRecords
         ];
     }
 
+    /**
+     * PERBAIKAN: Mengubah hak akses menjadi public agar sesuai dengan class induk (ListRecords).
+     * Ini akan mengatasi error FatalError mengenai access level.
+     */
+    public function getFilteredTableQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getFilteredTableQuery();
+
+        if ($this->dariTanggal && $this->sampaiTanggal) {
+            $query->whereBetween('created_at', [
+                Carbon::parse($this->dariTanggal)->startOfDay(),
+                Carbon::parse($this->sampaiTanggal)->endOfDay(),
+            ]);
+        }
+
+        return $query;
+    }
+
     protected function getTableBulkActions(): array
     {
         return [
-            Tables\Actions\BulkAction::make('export')
-                ->label('Ekspor Data')
+            DeleteBulkAction::make(),
+            BulkAction::make('export')
+                ->label('Ekspor Data Terpilih')
                 ->icon('heroicon-o-document-arrow-up')
                 ->form([
                     Radio::make('format')
                         ->label('Format')
-                        ->options([
-                            'pdf' => 'PDF',
-                            'excel' => 'Excel',
-                        ])
+                        ->options(['pdf' => 'PDF', 'excel' => 'Excel'])
                         ->default('pdf')
                         ->required()
                         ->inline(),
@@ -234,16 +220,15 @@ class ListPenduduks extends ListRecords
     protected function getTableActions(): array
     {
         return [
-            Tables\Actions\Action::make('export')
+            Actions\ViewAction::make(),
+            Actions\EditAction::make(),
+            Actions\Action::make('export')
                 ->label('Ekspor')
                 ->icon('heroicon-o-document-arrow-up')
                 ->form([
                     Radio::make('format')
                         ->label('Format')
-                        ->options([
-                            'pdf' => 'PDF',
-                            'excel' => 'Excel',
-                        ])
+                        ->options(['pdf' => 'PDF', 'excel' => 'Excel'])
                         ->default('pdf')
                         ->required()
                         ->inline(),
@@ -256,20 +241,5 @@ class ListPenduduks extends ListRecords
                     $this->redirect($url);
                 }),
         ];
-    }
-
-    // Menerapkan filter ke query tabel
-    protected function applyFiltersToTableQuery(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
-    {
-        $query = parent::applyFiltersToTableQuery($query);
-
-        if ($this->dariTanggal && $this->sampaiTanggal) {
-            $query->whereBetween('created_at', [
-                Carbon::parse($this->dariTanggal)->startOfDay(),
-                Carbon::parse($this->sampaiTanggal)->endOfDay(),
-            ]);
-        }
-
-        return $query;
     }
 }

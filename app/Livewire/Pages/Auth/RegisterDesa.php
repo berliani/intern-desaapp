@@ -2,27 +2,23 @@
 
 namespace App\Livewire\Pages\Auth;
 
-use App\IMS\EnkripsiIMS;
-use Livewire\Component;
 use App\Models\User;
 use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
+use Livewire\Component;
 use Illuminate\Support\Str;
 use Twilio\Rest\Client as TwilioClient;
 
 #[Layout('layouts.guest')]
 class RegisterDesa extends Component
 {
-    public string $name = '';
-    public string $username = '';
     public string $name = '';
     public string $username = '';
     public string $email = '';
@@ -45,6 +41,7 @@ class RegisterDesa extends Component
     {
         $this->generatedCaptcha = Str::random(6);
         session(['captcha' => $this->generatedCaptcha]);
+        $this->captcha = '';
     }
 
     public function sendVerificationCode(): void
@@ -60,8 +57,8 @@ class RegisterDesa extends Component
         if ($this->verificationMethod === 'email') {
             $validated = $this->validate(['email' => ['required', 'email', 'max:255']]);
 
-            // Cek keunikan secara manual menggunakan hash
-            $emailSearchHash = hash('sha256', strtolower($validated['email']));
+            // Cek keunikan secara manual menggunakan hash dari Model User
+            $emailSearchHash = User::hashForSearch(strtolower($validated['email']));
             if (User::where('email_search_hash', $emailSearchHash)->exists()) {
                 $this->addError('email', 'Alamat email ini sudah terdaftar.');
                 return;
@@ -69,11 +66,12 @@ class RegisterDesa extends Component
 
             $this->sendOtpByEmail($validated['email']);
         } else {
+            // <<< PERBAIKAN: Menghapus blok validasi telepon yang duplikat
             $validated = $this->validate(['telepon' => ['required', 'string', 'regex:/^(\+62|62|0)8[0-9]{9,15}$/']]);
             $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
 
-            // Cek keunikan secara manual menggunakan hash
-            $teleponSearchHash = hash('sha256', $normalizedPhone);
+            // Cek keunikan secara manual menggunakan hash dari Model User
+            $teleponSearchHash = User::hashForSearch($normalizedPhone);
             if (User::where('telepon_search_hash', $teleponSearchHash)->exists()) {
                 $this->addError('telepon', 'Nomor telepon ini sudah terdaftar.');
                 return;
@@ -82,8 +80,10 @@ class RegisterDesa extends Component
             $this->sendOtpByWhatsApp($validated['telepon']);
         }
 
-        $this->otpSent = true;
-        session()->flash('status', 'Kode verifikasi telah dikirim!');
+        if (empty($this->getErrorBag()->get('telepon'))) {
+            $this->otpSent = true;
+            session()->flash('status', 'Kode verifikasi telah dikirim!');
+        }
     }
 
     public function verifyOtp(): void
@@ -106,11 +106,10 @@ class RegisterDesa extends Component
             return;
         }
 
+        // <<< PERBAIKAN: Menghapus duplikasi aturan validasi email dan telepon
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255', 'alpha_dash', 'unique:users,username'],
-            'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255'],
-            'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string'],
             'email' => ['required_if:verificationMethod,email', 'nullable', 'email', 'max:255'],
             'telepon' => ['required_if:verificationMethod,whatsapp', 'nullable', 'string'],
             'password' => [
@@ -125,41 +124,31 @@ class RegisterDesa extends Component
         ]);
 
         DB::transaction(function () use ($validated) {
-            // 2. Siapkan encryptor
-            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
-            if (!$key) { throw new \Exception("Kunci enkripsi IMS tidak valid."); }
-            $encryptor = new EnkripsiIMS($key);
             $company = Company::create([
                 'name' => 'Desa ' . $validated['name'],
                 'subdomain' => 'desa-' . Str::slug($validated['name']) . '-' . Str::lower(Str::random(4)),
             ]);
-
+            
+            // <<< PERBAIKAN: Menyerahkan enkripsi ke Model User secara otomatis
+            // Model User akan menangani enkripsi dan hashing saat `User::create()` dipanggil.
             $userData = [
                 'name' => $validated['name'],
                 'username' => $validated['username'],
-                'password' => Hash::make($validated['password']),
+                'password' => $validated['password'], // Model akan hash ini secara otomatis
                 'company_id' => $company->id,
+                'email' => $validated['email'] ?? null,
+                'telepon' => $this->normalizePhoneNumber($validated['telepon'] ?? null),
             ];
-
-            if (!empty($validated['email'])) {
-                $userData['email_encrypted'] = $encryptor->encrypt($validated['email']);
-                $userData['email_search_hash'] = hash('sha256', strtolower($validated['email']));
-            }
-
-            if (!empty($validated['telepon'])) {
-                $normalizedPhone = $this->normalizePhoneNumber($validated['telepon']);
-                $userData['telepon_encrypted'] = $encryptor->encrypt($normalizedPhone);
-                $userData['telepon_search_hash'] = hash('sha256', $normalizedPhone);
-            }
 
             $adminUser = User::create($userData);
 
             $adminUser->assignRole('admin');
             event(new Registered($adminUser));
             Auth::login($adminUser);
+        }); // <<< PERBAIKAN UTAMA: Menambahkan `);` yang hilang untuk menutup DB::transaction
 
-
-        return $this->redirect(route('desa.profil.create'));
+        // Redirect harus di luar transaction closure
+        return $this->redirect(route('filament.admin.pages.dashboard'), navigate: true);
     }
 
     private function sendOtpByEmail(string $email)
@@ -178,6 +167,12 @@ class RegisterDesa extends Component
         $sid    = env('TWILIO_SID');
         $token  = env('TWILIO_AUTH_TOKEN');
         $from   = env('TWILIO_WHATSAPP_FROM');
+
+        if (!$sid || !$token || !$from) {
+            $this->addError('telepon', 'Konfigurasi layanan WhatsApp tidak lengkap. Harap hubungi admin.');
+            return;
+        }
+
         $client = new TwilioClient($sid, $token);
 
         try {
@@ -186,8 +181,7 @@ class RegisterDesa extends Component
                 "body" => "Kode verifikasi pendaftaran desa Anda adalah: {$otpCode}"
             ]);
         } catch (\Twilio\Exceptions\TwilioException $e) {
-            session()->flash('error', 'Gagal mengirim OTP WhatsApp: ' . $e->getMessage());
-            $this->otpSent = false;
+            $this->addError('telepon', 'Gagal mengirim OTP. Pastikan nomor benar dan terdaftar WhatsApp.');
         }
     }
 
@@ -195,10 +189,10 @@ class RegisterDesa extends Component
     {
         if (empty($phoneNumber)) return null;
         $number = preg_replace('/[^0-9]/', '', $phoneNumber);
-        if (substr($number, 0, 1) === '0') {
+        if (str_starts_with($number, '0')) {
             return '62' . substr($number, 1);
         }
-        if (substr($number, 0, 2) !== '62') {
+        if (!str_starts_with($number, '62')) {
             return '62' . $number;
         }
         return $number;

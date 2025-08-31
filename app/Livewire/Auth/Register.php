@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Mail\SendOtpMail;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -76,6 +77,7 @@ class Register extends Component
                 ->first();
 
             if ($penduduk) {
+                // Cek apakah NIK ini sudah terhubung dengan user lain
                 if ($penduduk->user_id) {
                     $this->addError('nik', 'NIK ini sudah terdaftar dan terhubung dengan akun lain.');
                     return;

@@ -1,9 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Models\User;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
@@ -60,18 +58,27 @@ new #[Layout('layouts.guest')] class extends Component {
 
         $isEmail = filter_var($this->loginField, FILTER_VALIDATE_EMAIL);
 
-        $credentials = [
-            $isEmail ? 'email' : 'username' => $this->loginField,
-            'password' => $this->password,
-        ];
+        // ambil user manual via hash email atau username
+        if ($isEmail) {
+            // Normalisasi email sebelum di-hash biar konsisten
+            $normalizedEmail = strtolower(trim($this->loginField));
+            $emailHash = hash('sha256', $normalizedEmail);
 
+            /** @var \App\Models\User|null $user */
+            $user = User::where('email_search_hash', $emailHash)->first();
+        } else {
+            $user = User::where('username', $this->loginField)->first();
+        }
+
+        // validasi user & password manual
         if (!$user || !Hash::check($this->password, $user->password)) {
-            RateLimiter::hit($this->throttleKey());
+            RateLimiter::hit($this->throttleKey()); // tetap hit limiter saat gagal
             $this->addError('loginField', trans('auth.failed'));
             $this->generateCaptcha();
             return;
         }
 
+        // login manual + remember
         Auth::login($user, $this->remember);
 
         RateLimiter::clear($this->throttleKey());

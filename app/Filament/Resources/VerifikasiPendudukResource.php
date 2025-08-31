@@ -27,6 +27,8 @@ class VerifikasiPendudukResource extends Resource
     protected static ?string $recordTitleAttribute = 'nama';
     protected static ?int $navigationSort = 2;
 
+    public static ?string $tenantOwnershipRelationshipName = 'company';
+    
     public static function getNavigationLabel(): string
     {
         return 'Verifikasi Data Warga';

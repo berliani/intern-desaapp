@@ -35,4 +35,3 @@ class EditProfilDesa extends EditRecord
         return $data;
     }
 }
-}

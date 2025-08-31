@@ -14,8 +14,15 @@ class ProfilDesa extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /**
+     * Nama tabel database yang digunakan oleh model.
+     */
     protected $table = 'profil_desa';
 
+    /**
+     * Atribut yang dapat diisi secara massal (mass assignable).
+     * Duplikat telah dihapus untuk kebersihan kode.
+     */
     protected $fillable = [
         'company_id',
         'created_by',
@@ -26,21 +33,15 @@ class ProfilDesa extends Model
         'kode_pos',
         'thumbnails',
         'logo',
-        'alamat',
         'website',
         'visi',
         'misi',
         'sejarah',
-        'company_id',
-        'created_by',
-        // luas_wilayah dihapus
-
-        // Atribut virtual untuk form (telepon & email akan dienkripsi oleh mutator)
+        // Atribut virtual untuk form (akan dienkripsi oleh mutator)
         'telepon',
         'email',
         'alamat',
-
-        // Kolom-kolom baru yang dienkripsi dan di-hash
+        // Kolom di database untuk data terenkripsi dan hash
         'email_encrypted',
         'email_search_hash',
         'telepon_encrypted',
@@ -48,17 +49,22 @@ class ProfilDesa extends Model
         'alamat_encrypted',
         'alamat_search_hash',
     ];
-  
-    // agar accessor selalu dijalankan saat data model diubah menjadi array.
+
+    /**
+     * Menambahkan accessor ke representasi array/JSON model.
+     * Ini memastikan 'telepon', 'email', 'alamat' yang terdekripsi selalu ada saat data diakses.
+     */
     protected $appends = ['telepon', 'email', 'alamat'];
 
-    // Cast thumbnails sebagai array
+    /**
+     * Tipe data atribut yang akan di-cast secara otomatis.
+     */
     protected $casts = [
         'thumbnails' => 'array',
-        'sejarah' => 'string',
     ];
 
-            // --- BLOK KODE ENKRIPSI ---
+    // --- BLOK KODE ENKRIPSI ---
+    // Implementasi yang benar dipertahankan, duplikat dihapus.
     private static ?EnkripsiIMS $encryptorInstance = null;
     private static ?string $pepperKey = null;
 
@@ -86,12 +92,17 @@ class ProfilDesa extends Model
         return self::$pepperKey;
     }
 
-    // Telepon Accessor & Mutator
+    // --- MUTATOR & ACCESSOR UNTUK DATA SENSITIF ---
+
+    // Telepon
     public function setTeleponAttribute($value)
     {
         if (!empty($value)) {
             $this->attributes['telepon_encrypted'] = self::getEncryptor()->encrypt($value);
             $this->attributes['telepon_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        } else {
+            $this->attributes['telepon_encrypted'] = null;
+            $this->attributes['telepon_search_hash'] = null;
         }
     }
 
@@ -102,16 +113,20 @@ class ProfilDesa extends Model
         try {
             return self::getEncryptor()->decrypt($encrypted);
         } catch (\Exception $e) {
-            return 'Gagal Dekripsi';
+            return null; // Return null jika dekripsi gagal agar aman
         }
     }
 
-    // Email Accessor & Mutator
+    // Email
     public function setEmailAttribute($value)
     {
         if (!empty($value)) {
-            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['email_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            $lowerValue = strtolower($value);
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($lowerValue);
+            $this->attributes['email_search_hash'] = hash_hmac('sha256', $lowerValue, self::getPepperKey());
+        } else {
+            $this->attributes['email_encrypted'] = null;
+            $this->attributes['email_search_hash'] = null;
         }
     }
 
@@ -122,33 +137,40 @@ class ProfilDesa extends Model
         try {
             return self::getEncryptor()->decrypt($encrypted);
         } catch (\Exception $e) {
-            return 'Gagal Dekripsi';
+            return null;
         }
     }
 
-    // Alamat Accessor & Mutator 
+    // Alamat
     public function setAlamatAttribute($value)
     {
         if (!empty($value)) {
             $this->attributes['alamat_encrypted'] = self::getEncryptor()->encrypt($value);
             $this->attributes['alamat_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+        } else {
+            $this->attributes['alamat_encrypted'] = null;
+            $this->attributes['alamat_search_hash'] = null;
         }
     }
 
     public function getAlamatAttribute()
     {
-        $encrypted = $this->attributes['alamat_encrypted'] ?? $this->attributes['alamat'] ?? null;
+        $encrypted = $this->attributes['alamat_encrypted'] ?? null;
         if (!$encrypted) return null;
         try {
             return self::getEncryptor()->decrypt($encrypted);
         } catch (\Exception $e) {
-            // Fallback to plain text if decryption fails (for old data)
-            return $this->attributes['alamat_encrypted'] ? 'Gagal Dekripsi' : $this->attributes['alamat'];
+            return null;
         }
     }
-    // --- AKHIR ENKRIPSI ---
 
-    // Relasi-relasi
+    // --- RELASI ELOQUENT ---
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
@@ -198,10 +220,12 @@ class ProfilDesa extends Model
     {
         return $this->hasOne(StrukturPemerintahan::class, 'profil_desa_id');
     }
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
-    }
+
+    // --- HELPER METHODS ---
+
+    /**
+     * Mengembalikan nama lengkap wilayah administratif desa.
+     */
     public function getNamaLengkap(): string
     {
         $namaDesa = $this->nama_desa ?? '-';
@@ -211,6 +235,9 @@ class ProfilDesa extends Model
         return "Desa {$namaDesa}, Kecamatan {$kecamatan}, Kabupaten {$kabupaten}";
     }
 
+    /**
+     * Menghitung kepadatan penduduk (jiwa/km²).
+     */
     public function getKepadatanPenduduk(int $jumlahPenduduk = 0): ?float
     {
         $batasWilayah = $this->batasWilayahPotensi;
@@ -225,63 +252,29 @@ class ProfilDesa extends Model
             }
         }
 
+        // Konversi luas dari m² ke km²
         $luasKm2 = $batasWilayah->luas_wilayah / 1000000;
 
         return round($jumlahPenduduk / $luasKm2, 2);
     }
 
-
+    /**
+     * PERBAIKAN: Mengambil luas wilayah dari relasi BatasWilayahPotensi
+     * dan memformatnya ke dalam m² dan hektar.
+     */
     public function getLuasWilayahFormatted(): string
     {
-        if (!$this->luas_wilayah) {
+        // Mengambil data luas wilayah dari relasi
+        $luasWilayahM2 = $this->batasWilayahPotensi->luas_wilayah ?? null;
+
+        if (!$luasWilayahM2) {
             return '-';
         }
 
+        $luasM2Formatted = number_format($luasWilayahM2, 0, ',', '.');
+        $luasHaFormatted = number_format($luasWilayahM2 / 10000, 2, ',', '.');
 
-        $luasM2 = number_format($this->luas_wilayah, 0, ',', '.');
-
-
-        $luasHa = number_format($this->luas_wilayah / 10000, 2, ',', '.');
-
-        return "{$luasM2} m² ({$luasHa} ha)";
-    }
-
-    private static ?EnkripsiIMS $encryptorInstance = null;
-    private static function getEncryptor(): EnkripsiIMS
-    {
-        if (self::$encryptorInstance === null) {
-            $key = hex2bin(env('IMS_ENCRYPTION_KEY'));
-            if (!$key) {
-                throw new \Exception("Kunci enkripsi tidak valid.");
-            }
-            self::$encryptorInstance = new EnkripsiIMS($key);
-        }
-        return self::$encryptorInstance;
-    }
-
-    public function setTeleponAttribute($value)
-    {
-        if (!empty($value)) {
-            $this->attributes['telepon_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['telepon_search_hash'] = hash('sha256', $value);
-        }
-    }
-    public function getTeleponAttribute()
-    {
-        $encrypted = $this->attributes['telepon_encrypted'] ?? null;
-        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
-    }
-
-    public function setEmailAttribute($value)
-    {
-        if (!empty($value)) {
-            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt(strtolower($value));
-            $this->attributes['email_search_hash'] = hash('sha256', strtolower($value));
-        }
-    }
-    public function getEmailAttribute()
-    {
-        $encrypted = $this->attributes['email_encrypted'] ?? null;
-        return $encrypted ? self::getEncryptor()->decrypt($encrypted) : null;
+        return "{$luasM2Formatted} m² ({$luasHaFormatted} ha)";
     }
 }
+
