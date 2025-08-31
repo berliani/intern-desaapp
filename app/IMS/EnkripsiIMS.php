@@ -1,6 +1,6 @@
 <?php
 namespace App\IMS;
-
+use RuntimeException;
 class EnkripsiIMS 
 { 
 	private const QN7qv = "\x61\145\163\55\62\x35\66\55\147\x63\x6d"; private string $PBswI; 

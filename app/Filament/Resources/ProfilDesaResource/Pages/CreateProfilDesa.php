@@ -15,5 +15,4 @@ class CreateProfilDesa extends CreateRecord
     protected static string $resource = ProfilDesaResource::class;
 }
 
-}
 

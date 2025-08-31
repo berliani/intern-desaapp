@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
-use Illuminate\Database\Eloquent\Relations\HasOneThrough; 
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use App\IMS\EnkripsiIMS;
 use Carbon\Carbon;
@@ -17,34 +17,28 @@ class Penduduk extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'penduduk';
-
     protected $fillable = [
         'company_id',
-        'id_desa',
+        'desa_id',
+        'kepala_keluarga_id',
+        'user_id',
         'nama',
-        'alamat',
         'rt',
         'rw',
         'desa_kelurahan',
         'kecamatan',
         'kabupaten',
+        'provinsi',
         'tempat_lahir',
         'jenis_kelamin',
         'agama',
-        'rt',
-        'rw',
         'status_perkawinan',
         'kepala_keluarga',
         'pekerjaan',
         'pendidikan',
-        'desa_id',
-        'kepala_keluarga',
-        'kepala_keluarga_id',
-        'user_id',
         'golongan_darah',
-        'company_id',
 
-        // Atribut virtual untuk diterima dari form
+        // Atribut virtual untuk diterima dari form dan memicu mutator
         'nik',
         'kk',
         'tanggal_lahir',
@@ -52,11 +46,7 @@ class Penduduk extends Model
         'email',
         'alamat',
 
-        // Kolom-kolom baru yang dienkripsi dan di-hash
-        'email_encrypted',
-        'email_search_hash',
-        'telepon_encrypted',
-        'telepon_search_hash',
+        // Kolom di database untuk data terenkripsi dan hash
         'nik_encrypted',
         'nik_search_hash',
         'nik_prefix_hash',
@@ -64,21 +54,21 @@ class Penduduk extends Model
         'kk_search_hash',
         'tanggal_lahir_encrypted',
         'tanggal_lahir_search_hash',
+        'email_encrypted',
+        'email_search_hash',
         'no_hp_encrypted',
         'no_hp_search_hash',
-        'alamat_encrypted', 
-        'alamat_search_hash', 
+        'alamat_encrypted',
+        'alamat_search_hash',
     ];
 
-    //  agar accessor selalu dijalankan saat data model diubah menjadi array, sehingga form edit akan terisi otomatis.
+    //  agar accessor selalu dijalankan saat data model diubah menjadi array, sehingga form edit akan terisi otomatis.
     protected $appends = ['nik', 'kk', 'tanggal_lahir', 'no_hp', 'email', 'alamat'];
-
 
     protected $casts = [
         'kepala_keluarga' => 'boolean',
         'jenis_kelamin' => 'string',
     ];
-
 
     // --- BLOK KODE ENKRIPSI ---
     private static ?EnkripsiIMS $encryptorInstance = null;
@@ -108,15 +98,22 @@ class Penduduk extends Model
         return self::$pepperKey;
     }
 
+    // Metode hash untuk pencarian
+    public static function hashForSearch(string $value): string
+    {
+        return hash_hmac('sha256', $value, self::getPepperKey());
+    }
+
     // NIK Accessor & Mutator
     public function setNikAttribute($value)
     {
         if (!empty($value)) {
             $this->attributes['nik_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['nik_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            // Menggunakan metode hashForSearch 
+            $this->attributes['nik_search_hash'] = self::hashForSearch($value);
             if (strlen($value) >= 8) {
                 $prefix = substr($value, 0, 8);
-                $this->attributes['nik_prefix_hash'] = hash_hmac('sha256', $prefix, self::getPepperKey());
+                $this->attributes['nik_prefix_hash'] = self::hashForSearch($prefix);
             }
         }
     }
@@ -137,7 +134,8 @@ class Penduduk extends Model
     {
         if (!empty($value)) {
             $this->attributes['kk_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['kk_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            // Menggunakan metode hashForSearch 
+            $this->attributes['kk_search_hash'] = self::hashForSearch($value);
         }
     }
 
@@ -158,7 +156,8 @@ class Penduduk extends Model
         if (!empty($value)) {
             $date = Carbon::parse($value)->format('Y-m-d');
             $this->attributes['tanggal_lahir_encrypted'] = self::getEncryptor()->encrypt($date);
-            $this->attributes['tanggal_lahir_search_hash'] = hash_hmac('sha256', $date, self::getPepperKey());
+            // Menggunakan metode hashForSearch
+            $this->attributes['tanggal_lahir_search_hash'] = self::hashForSearch($date);
         }
     }
 
@@ -178,7 +177,8 @@ class Penduduk extends Model
     {
         if (!empty($value)) {
             $this->attributes['no_hp_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['no_hp_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            // Menggunakan metode hashForSearch 
+            $this->attributes['no_hp_search_hash'] = self::hashForSearch($value);
         }
     }
 
@@ -197,8 +197,11 @@ class Penduduk extends Model
     public function setEmailAttribute($value)
     {
         if (!empty($value)) {
-            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['email_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            // Normalisasi email ke huruf kecil sebelum enkripsi/hash
+            $lowerValue = strtolower($value);
+            $this->attributes['email_encrypted'] = self::getEncryptor()->encrypt($lowerValue);
+            // Menggunakan metode hashForSearch 
+            $this->attributes['email_search_hash'] = self::hashForSearch($lowerValue);
         }
     }
 
@@ -213,12 +216,13 @@ class Penduduk extends Model
         }
     }
 
-    // -Alamat Accessor & Mutator ---
+    // Alamat Accessor & Mutator
     public function setAlamatAttribute($value)
     {
         if (!empty($value)) {
             $this->attributes['alamat_encrypted'] = self::getEncryptor()->encrypt($value);
-            $this->attributes['alamat_search_hash'] = hash_hmac('sha256', $value, self::getPepperKey());
+            // Menggunakan metode hashForSearch
+            $this->attributes['alamat_search_hash'] = self::hashForSearch($value);
         }
     }
 
@@ -235,19 +239,12 @@ class Penduduk extends Model
     // --- AKHIR BLOK KODE ENKRIPSI ---
 
     /**
-     * Mendapatkan company (tenant) yang memiliki penduduk ini melalui profil desa.
-     * Relasi ini PENTING untuk multi-tenancy Filament.
+     * Mendapatkan company (tenant) yang memiliki penduduk ini.
+     * Menggunakan relasi BelongsTo langsung karena company_id ada di tabel penduduk.
      */
-    public function company(): HasOneThrough
+    public function company(): BelongsTo
     {
-        return $this->hasOneThrough(
-            Company::class,      // Model tujuan akhir (Company)
-            ProfilDesa::class,   // Model perantara (ProfilDesa)
-            'id',                // Foreign key di tabel ProfilDesa yang merujuk ke desa_id di Penduduk
-            'id',                // Foreign key di tabel Company yang merujuk ke company_id di ProfilDesa
-            'desa_id',           // Local key di tabel Penduduk
-            'company_id'         // Local key di tabel ProfilDesa
-        );
+        return $this->belongsTo(Company::class);
     }
 
     // Helper method untuk jenis kelamin
@@ -278,9 +275,9 @@ class Penduduk extends Model
     /**
      * Get the user associated with the penduduk.
      */
-    public function user(): HasOne
+    public function user(): BelongsTo
     {
-        return $this->hasOne(User::class);
+        return $this->belongsTo(User::class);
     }
 
     public function bansos(): HasMany
@@ -305,7 +302,6 @@ class Penduduk extends Model
     {
         return $this->belongsTo(KartuKeluarga::class, 'kk_search_hash', 'nomor_kk_search_hash');
     }
-
 
     public function isKepalaKeluarga(): bool
     {

@@ -6,6 +6,7 @@ use App\Models\ProfilDesa;
 use App\Models\User;
 use App\Models\VerifikasiPenduduk;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 use Livewire\Attributes\Layout;
 
@@ -69,27 +70,36 @@ class VerifikasiData extends Component
             'tempat_lahir' => 'required|string|max:20',
             'tanggal_lahir' => 'required|date',
             'jenis_kelamin' => 'required|in:L,P',
-            'agama' => 'required|in:Islam,Kristen,Katolik,Hindu,Buddha,Konghucu',
-            'status_perkawinan' => 'required|in:Belum Kawin,Kawin,Cerai Hidup,Cerai Mati',
-            'kepala_keluarga' => 'required|boolean',
-            'pekerjaan' => 'required|string|max:100',
-            'pendidikan' => 'required|in:Tidak Sekolah,Belum Sekolah,SD/Sederajat,SMP/Sederajat,SMA/Sederajat,D1,D2,D3,D4/S1,S2,S3',
-            'golongan_darah' => 'required|in:A+,A-,B+,B-,AB+,AB-,O+,O-,Tidak Tahu',
+            'alamat' => 'required|string',
+            'rt_rw' => 'required|string|max:7',
+            'agama' => 'required|string',
+            'status_perkawinan' => 'required|string',
+            'pekerjaan' => 'nullable|string',
+            'pendidikan' => 'nullable|string',
+            'kepala_keluarga' => 'boolean',
+            'no_hp' => 'nullable|string|max:15',
+            'email' => 'required|email|max:255',
+            'golongan_darah' => 'nullable|string|max:3',
+            // --- Validasi keunikan NIK menggunakan hash ---
+            'nik' => [
+                'required',
+                'string',
+                'size:16',
+                function ($attribute, $value, $fail) {
+                    $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
+                    $searchHash = hash_hmac('sha256', $value, $pepperKey);
+
+                    // Cek hanya jika user ini belum pernah mengajukan verifikasi
+                    if (!$this->verifikasiPending) {
+                        $existsInPenduduk = DB::table('penduduk')->where('nik_search_hash', $searchHash)->exists();
+                        $existsInVerifikasi = DB::table('verifikasi_penduduk')->where('nik_search_hash', $searchHash)->exists();
+                        if ($existsInPenduduk || $existsInVerifikasi) {
+                            $fail('NIK yang Anda masukkan sudah terdaftar atau sedang dalam proses verifikasi.');
+                        }
+                    }
+                }
+            ],
         ];
-
-        if ($this->hasRegisteredWithEmail) {
-            $rules['email'] = 'required|email|max:100';
-        } else {
-            $rules['email'] = 'nullable|email|max:100';
-        }
-
-        if ($this->hasRegisteredWithPhone) {
-            $rules['no_hp'] = 'required|string|max:16';
-        } else {
-            $rules['no_hp'] = 'nullable|string|max:16';
-        }
-
-        return $rules;
     }
 
     public function submit()

@@ -29,12 +29,11 @@ class EncryptRemainingData extends Command
         $this->encryptor = new EnkripsiIMS($encryptionKey);
         DB::connection()->disableQueryLog();
 
-        $this->processTable('profil_desa', ['telepon', 'email']);
-        $this->processTable('penduduk', ['nik', 'kk', 'no_hp', 'email']); // Menggunakan 'kk'
-        $this->processTable('kartu_keluarga', ['nomor_kk']); // Menggunakan 'kartu_keluarga'
-        $this->processTable('aparat_desa', ['kontak']);
-        $this->processTable('verifikasi_penduduk', ['nik', 'kk']); // Menggunakan 'kk'
-
+        $this->processTable('profil_desa', ['telepon', 'email', 'alamat']);
+        $this->processTable('penduduk', ['nik', 'kk', 'no_hp', 'email', 'tanggal_lahir', 'alamat']);
+        $this->processTable('kartu_keluarga', ['nomor_kk', 'alamat']); 
+        $this->processTable('aparat_desa', ['kontak', 'tanggal_lahir', 'alamat']);
+        $this->processTable('verifikasi_penduduk', ['nik', 'kk', 'tanggal_lahir', 'no_hp', 'email', 'alamat']); 
         $this->info("\nData encryption for all tables completed successfully.");
         return 0;
     }
@@ -60,13 +59,20 @@ class EncryptRemainingData extends Command
         DB::table($tableName)->orderBy('id')->chunk(200, function ($records) use ($tableName, $fields, $progressBar) {
             foreach ($records as $record) {
                 $updates = [];
+
                 foreach ($fields as $field) {
                     $encryptedField = "{$field}_encrypted";
-                    if (property_exists($record, $field) && !empty($record->{$field}) && empty($record->{$encryptedField})) {
-                        $updates[$encryptedField] = $this->encryptor->encrypt($record->{$field});
-                        $updates["{$field}_search_hash"] = hash_hmac('sha256', $record->{$field}, $this->pepperKey);
 
-                        // PERBAIKAN: Logika khusus untuk prefix NIK, HANYA untuk tabel 'penduduk'
+                    if (property_exists($record, $field) && !empty($record->{$field}) && empty($record->{$encryptedField})) {
+                        // Selalu simpan versi encrypted
+                        $updates[$encryptedField] = $this->encryptor->encrypt($record->{$field});
+
+                        // Buat search_hash hanya jika field BUKAN tanggal_lahir
+                        if ($field !== 'tanggal_lahir') {
+                            $updates["{$field}_search_hash"] = hash_hmac('sha256', $record->{$field}, $this->pepperKey);
+                        }
+
+                        // Logika khusus prefix NIK di tabel penduduk
                         if ($tableName === 'penduduk' && $field === 'nik' && strlen($record->{$field}) >= 8) {
                             $prefix = substr($record->{$field}, 0, 8);
                             $updates['nik_prefix_hash'] = hash_hmac('sha256', $prefix, $this->pepperKey);
@@ -77,6 +83,7 @@ class EncryptRemainingData extends Command
                 if (!empty($updates)) {
                     DB::table($tableName)->where('id', $record->id)->update($updates);
                 }
+
                 $progressBar->advance();
             }
         });

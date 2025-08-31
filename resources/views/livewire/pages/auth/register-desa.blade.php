@@ -33,6 +33,7 @@
             <h3 class="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">1. Verifikasi Akun</h3>
 
             @if (!$otpVerified)
+            @if (!$otpVerified)
                 {{-- Pilih Metode --}}
                 <div>
                     <x-input-label value="Pilih Metode Verifikasi" />
@@ -40,10 +41,14 @@
                         <label class="flex items-center space-x-2 cursor-pointer">
                             <input type="radio" wire:model.live="verificationMethod" value="email"
                                 name="verification_method"
+                            <input type="radio" wire:model.live="verificationMethod" value="email"
+                                name="verification_method"
                                 class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300">
                             <span class="text-gray-700">Email</span>
                         </label>
                         <label class="flex items-center space-x-2 cursor-pointer">
+                            <input type="radio" wire:model.live="verificationMethod" value="whatsapp"
+                                name="verification_method"
                             <input type="radio" wire:model.live="verificationMethod" value="whatsapp"
                                 name="verification_method"
                                 class="focus:ring-emerald-500 h-4 w-4 text-emerald-600 border-gray-300">
@@ -55,10 +60,13 @@
                 {{-- Input Email / WhatsApp --}}
                 <div class="mt-4">
                     @if ($verificationMethod === 'email')
+                    @if ($verificationMethod === 'email')
                         <div>
                             <x-input-label for="email">
                                 Alamat Email <span class="text-red-500">*</span>
                             </x-input-label>
+                            <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" />
+                            <x-input-error :messages="$errors->get('email')" class="mt-2" />
                             <x-text-input wire:model="email" id="email" class="block mt-1 w-full" type="email" />
                             <x-input-error :messages="$errors->get('email')" class="mt-2" />
                         </div>
@@ -76,6 +84,7 @@
                     @endif
                 </div>
                     @if ($verificationMethod === 'whatsapp')
+                    @if ($verificationMethod === 'whatsapp')
                         <div>
                             <x-input-label for="telepon">
                                 Nomor WhatsApp <span class="text-red-500">*</span>
@@ -91,6 +100,7 @@
                 <label for="captcha" class="block text-sm font-medium text-gray-700 mt-4">Verifikasi Captcha</label>
                 <div class="flex items-center space-x-4 mt-1">
                     <div class="flex items-center justify-around w-48 h-16 px-2 bg-gray-200 border rounded-md overflow-hidden"
+                        style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d4d8\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
                         style="background-image: url('data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23d4d4d8\' fill-opacity=\'0.4\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E');">
 
                         @if (!empty($generatedCaptcha))
@@ -115,8 +125,8 @@
                     </div>
                     <button type="button" wire:click="generateCaptcha" title="Refresh Captcha"
                         class="p-2 text-gray-600 bg-white border rounded-md hover:bg-gray-50">
-                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                            stroke-width="1.5" stroke="currentColor">
+                        <svg class="w-5 h-5" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"
+                            fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round"
                                 d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0011.664 0l3.181-3.183m-4.991-2.695v-2.257a2.25 2.25 0 00-2.25-2.25H10.5a2.25 2.25 0 00-2.25 2.25v2.257m1.5-10.128l1.272 1.272M21 21l-1.272-1.272" />
                         </svg>

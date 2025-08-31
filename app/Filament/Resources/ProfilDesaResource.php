@@ -4,37 +4,39 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProfilDesaResource\Pages;
 use App\Models\ProfilDesa;
+use Filament\Facades\Filament;
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Tabs;
 use Filament\Forms\Components\Tabs\Tab;
-use Filament\Tables\Columns\TextColumn;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
-use Filament\Forms\Components\TextInput;
-use Filament\Facades\Filament;
 
 class ProfilDesaResource extends Resource
 {
     protected static ?string $model = ProfilDesa::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
-
     protected static ?string $navigationGroup = 'Desa';
-
     protected static bool $shouldRegisterNavigation = true;
-
     protected static ?string $recordTitleAttribute = 'nama_desa';
-
     protected static ?int $navigationSort = 1;
+
+    /**
+     * PERBAIKAN KUNCI: Menggunakan properti ini untuk mendefinisikan relasi tenant.
+     * Ini adalah cara yang benar di Filament v3 dan akan secara otomatis
+     * memfilter data berdasarkan desa (company) yang aktif.
+     */
+    public static ?string $tenantOwnershipRelationshipName = 'company';
 
     public static function getNavigationLabel(): string
     {
@@ -48,18 +50,10 @@ class ProfilDesaResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-
-        if ($tenant = Filament::getTenant()) {
-            return ProfilDesa::where('company_id', $tenant->id)->count();
-        }
-
-        return 0;
+        // getEloquentQuery() sudah otomatis di-scope ke tenant aktif
+        return static::getEloquentQuery()->count() ?: null;
     }
 
-        public static function getTenantRelationshipName(): string
-    {
-        return 'profildesas';
-    }
 
     public static function form(Form $form): Form
     {
@@ -92,13 +86,6 @@ class ProfilDesaResource extends Resource
                                                     ->removeUploadedFileButtonPosition('right')
                                                     ->uploadButtonPosition('left')
                                                     ->panelAspectRatio('16:9')
-                                                    ->validationMessages([
-                                                        'accept' => 'File harus berupa gambar (JPG, PNG, GIF)',
-                                                        'max' => 'Ukuran maksimal file adalah 5MB',
-                                                        'image' => 'File harus berupa gambar',
-                                                        'dimensions' => 'Gambar harus memiliki rasio 16:9',
-                                                        'uploaded' => 'Upload gagal - periksa ukuran file dan format gambar'
-                                                    ])
                                                     ->openable(),
 
                                                 Forms\Components\FileUpload::make('logo')
@@ -112,13 +99,6 @@ class ProfilDesaResource extends Resource
                                                     ->columnSpan(1)
                                                     ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif'])
                                                     ->helperText('Upload logo desa dengan format persegi (1:1). Ukuran maksimal 2MB.')
-                                                    ->validationMessages([
-                                                        'accept' => 'File harus berupa gambar (JPG, PNG, GIF)',
-                                                        'max' => 'Ukuran maksimal file adalah 2MB',
-                                                        'image' => 'File harus berupa gambar',
-                                                        'dimensions' => 'Logo harus memiliki rasio 1:1 (persegi)',
-                                                        'uploaded' => 'Upload gagal - periksa ukuran file dan format gambar'
-                                                    ])
                                                     ->openable(),
                                             ]),
                                     ]),
@@ -168,41 +148,13 @@ class ProfilDesaResource extends Resource
                                     ->label('Visi Desa')
                                     ->fileAttachmentsDisk('public')
                                     ->fileAttachmentsDirectory('uploads/desa')
-                                    ->toolbarButtons([
-                                        'attachFiles',
-                                        'blockquote',
-                                        'bold',
-                                        'bulletList',
-                                        'h2',
-                                        'h3',
-                                        'italic',
-                                        'link',
-                                        'orderedList',
-                                        'redo',
-                                        'strike',
-                                        'underline',
-                                        'undo',
-                                    ])
+                                    ->toolbarButtons(['attachFiles', 'blockquote', 'bold', 'bulletList', 'h2', 'h3', 'italic', 'link', 'orderedList', 'redo', 'strike', 'underline', 'undo'])
                                     ->columnSpanFull(),
                                 Forms\Components\RichEditor::make('misi')
                                     ->label('Misi Desa')
                                     ->fileAttachmentsDisk('public')
                                     ->fileAttachmentsDirectory('uploads/desa')
-                                    ->toolbarButtons([
-                                        'attachFiles',
-                                        'blockquote',
-                                        'bold',
-                                        'bulletList',
-                                        'h2',
-                                        'h3',
-                                        'italic',
-                                        'link',
-                                        'orderedList',
-                                        'redo',
-                                        'strike',
-                                        'underline',
-                                        'undo',
-                                    ])
+                                    ->toolbarButtons(['attachFiles', 'blockquote', 'bold', 'bulletList', 'h2', 'h3', 'italic', 'link', 'orderedList', 'redo', 'strike', 'underline', 'undo'])
                                     ->columnSpanFull(),
                             ]),
 
@@ -212,30 +164,15 @@ class ProfilDesaResource extends Resource
                                     ->label('Sejarah Desa')
                                     ->fileAttachmentsDisk('public')
                                     ->fileAttachmentsDirectory('uploads/desa')
-                                    ->toolbarButtons([
-                                        'attachFiles',
-                                        'blockquote',
-                                        'bold',
-                                        'bulletList',
-                                        'h2',
-                                        'h3',
-                                        'italic',
-                                        'link',
-                                        'orderedList',
-                                        'redo',
-                                        'strike',
-                                        'underline',
-                                        'undo',
-                                    ])
+                                    ->toolbarButtons(['attachFiles', 'blockquote', 'bold', 'bulletList', 'h2', 'h3', 'italic', 'link', 'orderedList', 'redo', 'strike', 'underline', 'undo'])
                                     ->columnSpanFull(),
                             ]),
                     ])
                     ->columnSpanFull(),
-                // DITAMBAHKAN: Field tersembunyi untuk menyimpan data otomatis
-                Forms\Components\Hidden::make('company_id')->default(fn () => Auth::user()->company_id),
+
+                // Menyimpan company_id secara otomatis
+                Forms\Components\Hidden::make('company_id')->default(fn () => Filament::getTenant()->id),
                 Forms\Components\Hidden::make('created_by')->default(fn () => Auth::id()),
-                Forms\Components\Hidden::make('company_id')->default(fn() => Auth::user()->company_id),
-                Forms\Components\Hidden::make('created_by')->default(fn() => Auth::id()),
             ]);
     }
 
@@ -248,56 +185,41 @@ class ProfilDesaResource extends Resource
                     ->disk('public')
                     ->circular()
                     ->defaultImageUrl(url('/images/default-logo.png')),
-
                 ImageColumn::make('thumbnails')
                     ->label('Thumbnail')
                     ->disk('public')
                     ->circular(),
-
                 TextColumn::make('nama_desa')
                     ->label('Nama Desa')
                     ->searchable()
                     ->sortable(),
-
                 TextColumn::make('kecamatan')
                     ->searchable()
                     ->sortable(),
-
                 TextColumn::make('kabupaten')
                     ->searchable()
                     ->sortable(),
-
                 TextColumn::make('provinsi')
                     ->searchable()
                     ->sortable(),
-
-                // Kolom telepon dengan fungsi pencarian enkripsi
+                
+                // PENYESUAIAN: Menambahkan kembali kolom dan logika pencarian terenkripsi
                 TextColumn::make('telepon')
                     ->label('Telepon')
                     ->searchable(isIndividual: true, isGlobal: true, query: function (Builder $query, string $search): Builder {
-                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
-                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
-                        return $query->where('telepon_search_hash', $hashedSearch);
+                        return $query->where('telepon_search_hash', ProfilDesa::hashForSearch($search));
                     }),
-
-                // Kolom email dengan fungsi pencarian enkripsi
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable(isIndividual: true, isGlobal: true, query: function (Builder $query, string $search): Builder {
-                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
-                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
-                        return $query->where('email_search_hash', $hashedSearch);
+                        return $query->where('email_search_hash', ProfilDesa::hashForSearch($search));
                     }),
-
-
                 TextColumn::make('alamat')
                     ->label('Alamat')
                     ->limit(30)
                     ->tooltip(fn (ProfilDesa $record): string => $record->alamat ?? '')
                     ->searchable(isIndividual: true, isGlobal: true, query: function (Builder $query, string $search): Builder {
-                        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
-                        $hashedSearch = hash_hmac('sha256', $search, $pepperKey);
-                        return $query->where('alamat_search_hash', $hashedSearch);
+                        return $query->where('alamat_search_hash', ProfilDesa::hashForSearch($search));
                     }),
 
                 TextColumn::make('updated_at')
@@ -311,29 +233,22 @@ class ProfilDesaResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-                // Tables\Actions\DeleteAction::make(),
-                Tables\Actions\RestoreAction::make()
-                    ->visible(fn ($record) => $record->trashed()),
-                Tables\Actions\ForceDeleteAction::make()
-                    ->visible(fn ($record) => $record->trashed()),
-                    ->visible(fn($record) => $record->trashed()),
-                Tables\Actions\ForceDeleteAction::make()
-                    ->visible(fn($record) => $record->trashed()),
+                Tables\Actions\RestoreAction::make(),
+                Tables\Actions\ForceDeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    // Tables\Actions\DeleteBulkAction::make(),
                     Tables\Actions\RestoreBulkAction::make(),
                     Tables\Actions\ForceDeleteBulkAction::make(),
                 ]),
             ])
-            ->paginated(false); // Menonaktifkan untuk Showing list
+            ->paginated(false);
     }
 
     public static function getRelations(): array
     {
         return [
-            // Relation manager dihapus
+            //
         ];
     }
 
@@ -349,14 +264,11 @@ class ProfilDesaResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
+        // Menghapus scope soft delete agar TrashedFilter dapat berfungsi
         return parent::getEloquentQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
-    }
-}
-
-        return ProfilDesa::query()->where('company_id', Filament::getTenant()->id);
     }
 }
 

@@ -8,28 +8,30 @@ use Filament\Resources\Pages\EditRecord;
 use Illuminate\Database\Eloquent\Model;
 use Filament\Notifications\Notification;
 use App\Models\Penduduk;
-use Filament\Facades\Filament; 
-use Filament\Facades\Filament;
+use Filament\Facades\Filament; // <<< PERBAIKAN: Menghapus duplikat 'use' statement
 
 class EditPenduduk extends EditRecord
 {
     protected static string $resource = PendudukResource::class;
 
-
-     protected function mutateFormDataBeforeFill(array $data): array
+    /**
+     * PERBAIKAN: Menggabungkan dua fungsi `mutateFormDataBeforeFill` yang duplikat.
+     * Fungsi ini akan mengisi form dengan data yang sudah didekripsi dari model
+     * dan data alamat dari profil desa yang aktif.
+     */
+    protected function mutateFormDataBeforeFill(array $data): array
     {
-
+        // Mengisi data terenkripsi dari accessor model
         $data['nik'] = $this->record->nik;
         $data['kk'] = $this->record->kk;
         $data['tanggal_lahir'] = $this->record->tanggal_lahir;
         $data['no_hp'] = $this->record->no_hp;
         $data['email'] = $this->record->email;
+        $data['alamat'] = $this->record->alamat; // Menambahkan alamat
 
-
+        // Mengisi data alamat dari profil desa (tenant)
         $profilDesa = Filament::getTenant()?->profilDesa;
-
         if ($profilDesa) {
-          
             $data['desa_kelurahan'] = $profilDesa->nama_desa;
             $data['kecamatan'] = $profilDesa->kecamatan;
             $data['kabupaten'] = $profilDesa->kabupaten;
@@ -42,93 +44,77 @@ class EditPenduduk extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            // Tenant-aware ViewAction
-            Actions\ViewAction::make()->url(fn(): string => $this->getResource()::getUrl('view', [
+            // <<< PERBAIKAN: Menghapus duplikat ViewAction, mempertahankan versi yang tenant-aware
+            Actions\ViewAction::make()->url(fn (): string => $this->getResource()::getUrl('view', [
                 'record' => $this->getRecord(),
                 'tenant' => $this->getRecord()->company_id,
             ])),
-            Actions\ViewAction::make(),
             Actions\DeleteAction::make(),
             Actions\ForceDeleteAction::make()
-                ->visible(fn($record) => $record->trashed()),
+                ->visible(fn ($record) => $record->trashed()),
             Actions\RestoreAction::make()
-                ->visible(fn($record) => $record->trashed()),
+                ->visible(fn ($record) => $record->trashed()),
         ];
     }
 
-    //  untuk mengisi field provinsi berdasarkan tenant yang sedang aktif
-    protected function mutateFormDataBeforeFill(array $data): array
-    {
-        $tenant = Filament::getTenant();
-        if ($tenant && $tenant->profilDesa) {
-            $data['provinsi'] = $tenant->profilDesa->provinsi;
-        }
-
-        return $data;
-    }
-
+    /**
+     * PERBAIKAN: Menghapus deklarasi fungsi `afterSave` yang bersarang (nested).
+     * Fungsi ini dijalankan setelah data disimpan untuk menangani logika
+     * kompleks terkait status Kepala Keluarga (KK).
+     */
     protected function afterSave(): void
     {
         $record = $this->record;
 
-        // Dapatkan nilai KK mentah dari form dan buat hash-nya
         $plainKk = $this->form->getState()['kk'];
-        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
 
-     protected function afterSave(): void
-    {
-        $record = $this->record;
+        // Menggunakan helper hashForSearch dari model untuk konsistensi
+        $kkSearchHash = Penduduk::hashForSearch($plainKk);
 
-        // --- PERBAIKAN LOGIKA KK ---
-        $plainKk = $this->form->getState()['kk'];
-        $pepperKey = hex2bin(env('IMS_PEPPER_KEY'));
-        if (!$pepperKey) {
-            Notification::make()->title('Error Konfigurasi Server')->danger()->send();
-            return;
-        }
-
-        $kkSearchHash = hash_hmac('sha256', $plainKk, $pepperKey);
-
+        // Jika penduduk ditandai sebagai Kepala Keluarga
         if ($record->kepala_keluarga) {
+            // Pastikan ID kepala keluarga adalah ID-nya sendiri
             if ($record->kepala_keluarga_id !== $record->id) {
                 $record->kepala_keluarga_id = $record->id;
                 $record->saveQuietly(); // Simpan tanpa memicu event lagi
             }
 
-            // Update semua anggota dengan KK yang sama menggunakan HASH
+            // Update semua anggota keluarga lain dengan No. KK yang sama
             Penduduk::where('kk_search_hash', $kkSearchHash)
                 ->where('id', '!=', $record->id)
                 ->update(['kepala_keluarga_id' => $record->id]);
         } else {
-            // Cek jika ada anggota yang masih terkait dengan ID penduduk ini sebagai kepala keluarga
+            // Jika status Kepala Keluarga dihapus
+            // Cek apakah masih ada anggota yang bergantung padanya
             $dependentCount = Penduduk::where('kepala_keluarga_id', $record->id)
-             $dependentCount = Penduduk::where('kepala_keluarga_id', $record->id)
                 ->where('id', '!=', $record->id)
                 ->count();
 
             if ($dependentCount > 0) {
+                // Jika masih ada, batalkan perubahan dan beri notifikasi
                 Notification::make()
                     ->title('Peringatan: Tidak dapat mengubah status')
                     ->body('Penduduk ini adalah kepala keluarga dengan ' . $dependentCount . ' anggota. Mohon pindahkan anggota ke kepala keluarga lain terlebih dahulu.')
                     ->danger()
                     ->send();
 
+                // Kembalikan statusnya menjadi Kepala Keluarga
                 $record->kepala_keluarga = true;
                 $record->kepala_keluarga_id = $record->id;
                 $record->saveQuietly();
             } else {
-                // Ini anggota keluarga, cari kepala keluarga dengan nomor KK yang sama menggunakan HASH
-                $kepalaKeluarga = Penduduk::where('kk_search_hash', $kkSearchHash)
+                // Jika tidak ada anggota, cari kepala keluarga baru di KK yang sama
+                $kepalaKeluargaBaru = Penduduk::where('kk_search_hash', $kkSearchHash)
                     ->where('kepala_keluarga', true)
+                    ->where('id', '!=', $record->id) // Pastikan bukan dirinya sendiri
                     ->first();
-                $record->kepala_keluarga_id = $kepalaKeluarga ? $kepalaKeluarga->id : null;
+
+                // Set kepala keluarga baru, atau null jika tidak ada
+                $record->kepala_keluarga_id = $kepalaKeluargaBaru?->id;
                 $record->saveQuietly();
-                $record->kepala_keluarga_id = $kepalaKeluarga?->id;
-                $record->save();
             }
         }
 
-        // Notifikasi sukses
         Notification::make()
             ->title('Data penduduk berhasil diperbarui')
             ->success()

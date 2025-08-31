@@ -22,6 +22,7 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Spatie\Permission\Middleware\RoleMiddleware;
+
 class AdminPanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
@@ -99,56 +100,33 @@ class AdminPanelProvider extends PanelProvider
 
             ->renderHook(
                 'panels::head.end',
-                fn() => '
-                <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-                <script>
-                    window.chart = function(config) {
-                        return {
-                            chart: null,
-                            init() {
-                                setTimeout(() => {
-                                    const canvas = this.$refs.canvas;
-                                    if (canvas) {
-                                        try {
-                                            this.chart = new Chart(canvas.getContext("2d"), {
-                                                type: config.type,
-                                                data: config.cachedData,
-                                                options: config.options
-                                            });
-                                        } catch(e) {
-                                            console.error("Error initializing chart:", e);
+                function () {
+                    return '
+                    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+                    <script>
+                        window.chart = function(config) {
+                            return {
+                                chart: null,
+                                init() {
+                                    setTimeout(() => {
+                                        const canvas = this.$refs.canvas;
+                                        if (canvas) {
+                                            try {
+                                                this.chart = new Chart(canvas.getContext("2d"), {
+                                                    type: config.type,
+                                                    data: config.cachedData,
+                                                    options: config.options
+                                                });
+                                            } catch(e) {
+                                                console.error("Error initializing chart:", e);
+                                            }
                                         }
-                                    }
-                                }, 100);
-                            }
+                                    }, 100);
+                                }
+                            };
                         };
-                    };
-                </script>'
-                fn() => '
-                  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
-                  <script>
-                       window.chart = function(config) {
-                           return {
-                               chart: null,
-                               init() {
-                                   setTimeout(() => {
-                                       const canvas = this.$refs.canvas;
-                                       if (canvas) {
-                                           try {
-                                               this.chart = new Chart(canvas.getContext("2d"), {
-                                                   type: config.type,
-                                                   data: config.cachedData,
-                                                   options: config.options
-                                               });
-                                           } catch(e) {
-                                               console.error("Error initializing chart:", e);
-                                           }
-                                       }
-                                   }, 100);
-                               }
-                           };
-                       };
-                  </script>'
+                    </script>';
+                }
             );
     }
 }
